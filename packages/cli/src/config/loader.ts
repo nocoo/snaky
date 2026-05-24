@@ -1,13 +1,12 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./builtins.js";
 import { validateConfig } from "./schema.js";
 import type {
   EffectiveConfig,
   Endpoint,
   PingTarget,
-  Settings,
-  DEFAULT_SETTINGS,
   RawConfig,
+  Settings,
 } from "./types.js";
 import { DEFAULT_SETTINGS as DEFAULTS } from "./types.js";
 

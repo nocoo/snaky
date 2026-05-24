@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { runPing, type PingResult } from "./ping-runner.js";
+import { describe, expect, it, vi } from "vitest";
 import type { PingTarget } from "../config/types.js";
+import { runPing } from "./ping-runner.js";
 
 function makeTarget(name: string): PingTarget {
   return { name, url: `https://${name}.com/health`, tag: "test" };
@@ -21,9 +21,9 @@ describe("runPing", () => {
     // 1 warmup + 3 measured = 4 total calls per target
     expect(pingFn).toHaveBeenCalledTimes(4);
     expect(results).toHaveLength(1);
-    expect(results[0]!.ok).toBe(true);
-    expect(results[0]!.rounds).toHaveLength(3);
-    expect(results[0]!.medianMs).toBe(50);
+    expect(results[0]?.ok).toBe(true);
+    expect(results[0]?.rounds).toHaveLength(3);
+    expect(results[0]?.medianMs).toBe(50);
   });
 
   it("warmup is not counted in rounds array", async () => {
@@ -41,8 +41,8 @@ describe("runPing", () => {
       pingFn,
     });
 
-    expect(results[0]!.rounds).toEqual([50, 50, 50]);
-    expect(results[0]!.rounds).not.toContain(999);
+    expect(results[0]?.rounds).toEqual([50, 50, 50]);
+    expect(results[0]?.rounds).not.toContain(999);
   });
 
   it("calculates median correctly", async () => {
@@ -59,7 +59,7 @@ describe("runPing", () => {
     });
 
     // Sorted successful: [20, 40, 60, 80], median = (40+60)/2 = 50
-    expect(results[0]!.medianMs).toBe(50);
+    expect(results[0]?.medianMs).toBe(50);
   });
 
   it("handles all rounds failed", async () => {
@@ -73,11 +73,11 @@ describe("runPing", () => {
       pingFn,
     });
 
-    expect(results[0]!.ok).toBe(false);
-    expect(results[0]!.medianMs).toBeNull();
-    expect(results[0]!.rounds).toEqual([-1, -1, -1]);
-    expect(results[0]!.error).toBeDefined();
-    expect(results[0]!.error!.code).toBe("ALL_FAILED");
+    expect(results[0]?.ok).toBe(false);
+    expect(results[0]?.medianMs).toBeNull();
+    expect(results[0]?.rounds).toEqual([-1, -1, -1]);
+    expect(results[0]?.error).toBeDefined();
+    expect(results[0]?.error?.code).toBe("ALL_FAILED");
   });
 
   it("handles partial success (median of successful only)", async () => {
@@ -93,10 +93,10 @@ describe("runPing", () => {
       pingFn,
     });
 
-    expect(results[0]!.ok).toBe(true);
-    expect(results[0]!.rounds).toEqual([80, -1, 60, -1, 40]);
+    expect(results[0]?.ok).toBe(true);
+    expect(results[0]?.rounds).toEqual([80, -1, 60, -1, 40]);
     // Successful: [40, 60, 80], median = 60
-    expect(results[0]!.medianMs).toBe(60);
+    expect(results[0]?.medianMs).toBe(60);
   });
 
   it("probes all targets concurrently within each round", async () => {

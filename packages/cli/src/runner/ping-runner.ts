@@ -31,7 +31,7 @@ export async function runPing(
   for (let round = 0; round < opts.rounds; round++) {
     const results = await runRound(targets, opts);
     for (let i = 0; i < targets.length; i++) {
-      roundResults[i]!.push(results[i]!);
+      roundResults[i]?.push(results[i]!);
     }
   }
 

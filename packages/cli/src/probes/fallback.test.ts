@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { probeWithFallback } from "./fallback.js";
 
 let server: Server;
 let port: number;
 
 beforeAll(async () => {
-  let primaryCallCount = 0;
+  let _primaryCallCount = 0;
 
   server = createServer((req, res) => {
     const url = new URL(req.url!, `http://localhost`);
 
     if (url.pathname === "/primary/cdn-cgi/trace") {
-      primaryCallCount++;
+      _primaryCallCount++;
       if (url.searchParams.get("fail") === "true") {
         res.writeHead(500);
         res.end("Error");

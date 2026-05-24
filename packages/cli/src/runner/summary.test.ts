@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { buildUniqueSummary } from "./summary.js";
+import { describe, expect, it } from "vitest";
 import type { ProbeResult } from "../probes/types.js";
+import { buildUniqueSummary } from "./summary.js";
 
 describe("buildUniqueSummary", () => {
   it("deduplicates by IP and counts occurrences", () => {
@@ -23,8 +23,8 @@ describe("buildUniqueSummary", () => {
       { ok: true, ip: "b.b.b.b", location: "HK", colo: "HKG", responseTimeMs: 50 },
     ];
     const summary = buildUniqueSummary(results);
-    expect(summary[0]!.ip).toBe("b.b.b.b");
-    expect(summary[0]!.count).toBe(3);
+    expect(summary[0]?.ip).toBe("b.b.b.b");
+    expect(summary[0]?.count).toBe(3);
   });
 
   it("handles null location from http-header probes", () => {

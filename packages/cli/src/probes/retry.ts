@@ -14,7 +14,7 @@ export async function withRetry(
   if (lastResult.ok) return lastResult;
 
   for (let attempt = 1; attempt <= opts.retries; attempt++) {
-    const delay = BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
+    const delay = BACKOFF_BASE_MS * 2 ** (attempt - 1);
     await sleep(delay);
     lastResult = await fn();
     if (lastResult.ok) return lastResult;

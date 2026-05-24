@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./builtins.js";
 
@@ -21,7 +21,7 @@ function readConfigFile(path: string): ConfigFile {
 function writeConfigFile(path: string, config: ConfigFile): void {
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(path, JSON.stringify(config, null, 2) + "\n");
+  writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
 }
 
 export type AddInput =

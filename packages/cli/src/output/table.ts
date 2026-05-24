@@ -1,6 +1,6 @@
-import type { ProbeEntry } from "./types.js";
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
+import type { ProbeEntry } from "./types.js";
 
 type TableOpts = {
   noColor?: boolean;
@@ -61,7 +61,7 @@ export function formatProbeTable(
     `Summary: ${succeeded}/${total} succeeded${ipSummary ? ` | Unique IPs: ${ipSummary}` : ""}`,
   );
 
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }
 
 export function formatPingTable(
@@ -89,7 +89,7 @@ export function formatPingTable(
     }
   }
 
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }
 
 function padRow(cols: string[]): string {

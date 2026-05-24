@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { probeHttpPing } from "./http-ping.js";
 
 let server: Server;

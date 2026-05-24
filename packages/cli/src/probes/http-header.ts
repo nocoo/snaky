@@ -1,6 +1,6 @@
 import { extractIpFromHeaders } from "../parsers/http-header.js";
-import type { ProbeResult, ProbeOpts } from "./types.js";
 import { classifyFetchError } from "./errors.js";
+import type { ProbeOpts, ProbeResult } from "./types.js";
 
 export async function probeHttpHeader(
   url: string,

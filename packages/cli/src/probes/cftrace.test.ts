@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { probeCftrace } from "./cftrace.js";
 
 let server: Server;
@@ -11,7 +11,7 @@ beforeAll(async () => {
 
     if (url.pathname === "/cdn-cgi/trace") {
       if (url.searchParams.get("delay")) {
-        const delay = parseInt(url.searchParams.get("delay")!);
+        const delay = parseInt(url.searchParams.get("delay")!, 10);
         setTimeout(() => {
           res.writeHead(200);
           res.end("ip=1.2.3.4\nloc=US\ncolo=LAX\n");

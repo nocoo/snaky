@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { formatProbeTable, formatPingTable } from "./table.js";
-import type { ProbeEntry } from "./types.js";
+import { describe, expect, it } from "vitest";
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
+import { formatPingTable, formatProbeTable } from "./table.js";
+import type { ProbeEntry } from "./types.js";
 
 describe("formatProbeTable", () => {
   it("formats success entries", () => {

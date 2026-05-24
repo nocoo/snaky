@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { computeExitCode } from "./exit-code.js";
+import { describe, expect, it } from "vitest";
 import type { ProbeResult } from "../probes/types.js";
 import type { PingResult } from "../runner/ping-runner.js";
+import { computeExitCode } from "./exit-code.js";
 
 describe("computeExitCode", () => {
   it("returns 0 when all probes succeed", () => {
