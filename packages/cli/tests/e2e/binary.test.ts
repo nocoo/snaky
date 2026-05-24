@@ -214,4 +214,118 @@ describe("CLI with mock server", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toContain("Created");
   });
+
+  it("--json output contains no ANSI escape sequences", async () => {
+    const testConfig = join(dir, "ansi-test.json");
+    writeFileSync(
+      testConfig,
+      JSON.stringify({
+        endpoints: [
+          {
+            name: "ansi-test",
+            method: "http-header",
+            url: "https://127.0.0.1:19999/check",
+            headers: ["x-real-ip"],
+          },
+        ],
+        timeout: 2000,
+        retries: 0,
+      }),
+    );
+
+    const { stdout } = await run([
+      "probe", "ansi-test", "--json",
+      "--config", testConfig,
+    ]);
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally testing for ANSI escapes
+    expect(stdout).not.toMatch(/\x1b\[/);
+    expect(() => JSON.parse(stdout)).not.toThrow();
+  });
+
+  it("--json schema has mode, probe, ping fields", async () => {
+    const testConfig = join(dir, "schema-test.json");
+    writeFileSync(
+      testConfig,
+      JSON.stringify({
+        endpoints: [
+          {
+            name: "schema-ep",
+            method: "http-header",
+            url: "https://127.0.0.1:19999/check",
+            headers: ["x-real-ip"],
+          },
+        ],
+        pingTargets: [
+          { name: "schema-ping", url: "https://127.0.0.1:19999/health", tag: "test" },
+        ],
+        timeout: 2000,
+        retries: 0,
+        pingRounds: 2,
+      }),
+    );
+
+    const { stdout } = await run([
+      "--json",
+      "--config", testConfig,
+    ]);
+    const parsed = JSON.parse(stdout);
+    expect(parsed).toHaveProperty("mode", "all");
+    expect(parsed).toHaveProperty("probe");
+    expect(parsed).toHaveProperty("ping");
+    expect(parsed.probe).toHaveProperty("results");
+    expect(parsed.probe).toHaveProperty("summary");
+    expect(parsed.probe).toHaveProperty("uniqueIps");
+    expect(parsed.probe.summary).toHaveProperty("total");
+    expect(parsed.probe.summary).toHaveProperty("succeeded");
+    expect(parsed.probe.summary).toHaveProperty("failed");
+    expect(parsed.ping).toHaveProperty("results");
+  });
+
+  it("--tier filters endpoints in json output", { timeout: 15000 }, async () => {
+    const testConfig = join(dir, "tier-test.json");
+    writeFileSync(
+      testConfig,
+      JSON.stringify({
+        endpoints: [
+          {
+            name: "tier1-ep",
+            method: "http-header",
+            url: "https://127.0.0.1:19999/check",
+            headers: ["x-real-ip"],
+            tier: 1,
+          },
+          {
+            name: "tier2-ep",
+            method: "http-header",
+            url: "https://127.0.0.1:19999/check",
+            headers: ["x-real-ip"],
+            tier: 2,
+          },
+        ],
+        pingTargets: [],
+        timeout: 2000,
+        retries: 0,
+        pingRounds: 1,
+      }),
+    );
+
+    // Only probe the named endpoints to avoid hitting builtins
+    const { stdout: stdout1 } = await run([
+      "probe", "tier1-ep", "--json",
+      "--config", testConfig,
+      "--tier", "1",
+    ]);
+    const parsed1 = JSON.parse(stdout1);
+
+    const { stdout: stdout2 } = await run([
+      "probe", "tier1-ep", "tier2-ep", "--json",
+      "--config", testConfig,
+      "--tier", "2",
+    ]);
+    const parsed2 = JSON.parse(stdout2);
+
+    expect(parsed1.probe.results).toHaveLength(1);
+    expect(parsed1.probe.results[0].name).toBe("tier1-ep");
+    expect(parsed2.probe.results).toHaveLength(2);
+  });
 });
