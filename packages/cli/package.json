@@ -16,15 +16,28 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run tests/e2e/",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write src/ tests/",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": ["ip", "probe", "latency", "routing", "vpn", "split-tunnel"],
+  "keywords": [
+    "ip",
+    "probe",
+    "latency",
+    "routing",
+    "vpn",
+    "split-tunnel"
+  ],
   "author": "nocoo",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^3.2.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
