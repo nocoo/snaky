@@ -27,6 +27,17 @@ describe("config mutation", () => {
   }
 
   describe("addEndpoint", () => {
+    it("returns error for malformed JSON config file", () => {
+      writeFileSync(configPath, "not valid json {{{");
+      const result = addEndpoint(configPath, {
+        name: "test",
+        method: "cftrace",
+        domain: "test.com",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/not valid JSON/i);
+    });
+
     it("adds a cftrace endpoint", () => {
       const result = addEndpoint(configPath, {
         name: "test",

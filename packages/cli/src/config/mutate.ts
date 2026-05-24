@@ -16,10 +16,16 @@ type ConfigFile = {
   [key: string]: unknown;
 };
 
-function readConfigFile(path: string): ConfigFile {
-  if (!existsSync(path)) return {};
+type ReadResult = { ok: true; config: ConfigFile } | { ok: false; error: string };
+
+function readConfigFile(path: string): ReadResult {
+  if (!existsSync(path)) return { ok: true, config: {} };
   const content = readFileSync(path, "utf-8");
-  return JSON.parse(content) as ConfigFile;
+  try {
+    return { ok: true, config: JSON.parse(content) as ConfigFile };
+  } catch {
+    return { ok: false, error: `Config file is not valid JSON: ${path}` };
+  }
 }
 
 function writeConfigFile(path: string, config: ConfigFile): void {
@@ -60,7 +66,9 @@ export function addEndpoint(configPath: string, input: AddInput): MutateResult {
     }
   }
 
-  const config = readConfigFile(configPath);
+  const read = readConfigFile(configPath);
+  if (!read.ok) return { ok: false, error: read.error };
+  const config = read.config;
 
   const allEndpoints = config.endpoints ?? [];
   const allPingTargets = config.pingTargets ?? [];
@@ -103,7 +111,9 @@ export function removeEndpoint(
   configPath: string,
   name: string,
 ): MutateResult {
-  const config = readConfigFile(configPath);
+  const read = readConfigFile(configPath);
+  if (!read.ok) return { ok: false, error: read.error };
+  const config = read.config;
   const endpoints = config.endpoints ?? [];
   const pingTargets = config.pingTargets ?? [];
 
@@ -148,7 +158,9 @@ export function disableEndpoint(
   configPath: string,
   name: string,
 ): MutateResult {
-  const config = readConfigFile(configPath);
+  const read = readConfigFile(configPath);
+  if (!read.ok) return { ok: false, error: read.error };
+  const config = read.config;
   const endpoints = config.endpoints ?? [];
   const pingTargets = config.pingTargets ?? [];
 
@@ -189,7 +201,9 @@ export function enableEndpoint(
   configPath: string,
   name: string,
 ): MutateResult {
-  const config = readConfigFile(configPath);
+  const read = readConfigFile(configPath);
+  if (!read.ok) return { ok: false, error: read.error };
+  const config = read.config;
   const endpoints = config.endpoints ?? [];
   const pingTargets = config.pingTargets ?? [];
 
