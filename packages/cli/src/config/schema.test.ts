@@ -220,4 +220,65 @@ describe("validateConfig", () => {
     });
     expect(result.ok).toBe(true);
   });
+
+  it("rejects cftrace domain with explicit port", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "test", method: "cftrace", domain: "example.com:8443" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/port/i);
+  });
+
+  it("rejects cftrace domain with scheme", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "test", method: "cftrace", domain: "https://example.com" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/scheme/i);
+  });
+
+  it("rejects cftrace domain with path", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "test", method: "cftrace", domain: "example.com/cdn-cgi" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/path/i);
+  });
+
+  it("rejects invalid domain format", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "test", method: "cftrace", domain: "not a domain" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/invalid domain/i);
+  });
+
+  it("rejects invalid header name (spaces)", () => {
+    const result = validateConfig({
+      endpoints: [
+        { name: "test", method: "http-header", url: "https://x.com/check", headers: ["bad header"] },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/invalid header name/i);
+  });
+
+  it("rejects invalid header name (special chars)", () => {
+    const result = validateConfig({
+      endpoints: [
+        { name: "test", method: "http-header", url: "https://x.com/check", headers: ["bad(header)"] },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/invalid header name/i);
+  });
+
+  it("accepts valid header names (x-forwarded-for, cdn-user-ip)", () => {
+    const result = validateConfig({
+      endpoints: [
+        { name: "test", method: "http-header", url: "https://x.com/check", headers: ["x-forwarded-for", "cdn-user-ip"] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+  });
 });

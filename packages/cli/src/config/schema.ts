@@ -1,4 +1,6 @@
 const NAME_RE = /^[a-z0-9][a-z0-9._-]{0,62}$/;
+const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const KNOWN_KEYS = new Set([
   "endpoints",
   "pingTargets",
@@ -118,6 +120,17 @@ function validateEndpoint(
   if (!method || method === "cftrace") {
     if (!disabled && !ep.domain) {
       errors.push(`Endpoint "${name}" (cftrace) requires domain`);
+    } else if (!disabled && typeof ep.domain === "string") {
+      const domain = ep.domain;
+      if (domain.includes("://")) {
+        errors.push(`Endpoint "${name}" domain must not include scheme`);
+      } else if (domain.includes(":")) {
+        errors.push(`Endpoint "${name}" domain must not include port`);
+      } else if (domain.includes("/")) {
+        errors.push(`Endpoint "${name}" domain must not include path`);
+      } else if (!DOMAIN_RE.test(domain)) {
+        errors.push(`Endpoint "${name}" has invalid domain "${domain}"`);
+      }
     }
   } else if (method === "http-header") {
     if (!disabled) {
@@ -136,6 +149,14 @@ function validateEndpoint(
         errors.push(
           `Endpoint "${name}" (http-header) requires non-empty headers array`,
         );
+      } else if (Array.isArray(ep.headers)) {
+        for (const h of ep.headers as string[]) {
+          if (typeof h !== "string" || !HEADER_NAME_RE.test(h)) {
+            errors.push(
+              `Endpoint "${name}" has invalid header name "${h}"`,
+            );
+          }
+        }
       }
     }
   }
