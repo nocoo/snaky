@@ -232,41 +232,42 @@ async function handleRun(
       endpoints = selected;
     }
 
+    type FallbackMeta = { usedFallback: boolean; resolvedTarget?: string };
+    const fallbackMeta = new Map<string, FallbackMeta>();
+
     const probeFn = async (ep: Endpoint): Promise<ProbeResult> => {
       if (ep.method === "cftrace") {
-        if (ep.fallbackDomain) {
-          const { result } = await probeWithFallback(
-            `https://${ep.domain}`,
-            `https://${ep.fallbackDomain}`,
-            { timeout, retries: config.settings.retries },
-          );
-          return result;
-        }
-        const { result } = await probeWithFallback(
+        const fb = await probeWithFallback(
           `https://${ep.domain}`,
-          undefined,
+          ep.fallbackDomain ? `https://${ep.fallbackDomain}` : undefined,
           { timeout, retries: config.settings.retries },
         );
-        return result;
-      } else {
-        // http-header — use retry
-        const { withRetry } = await import("./probes/retry.js");
-        return withRetry(
-          () => probeHttpHeader(ep.url, ep.headers, { timeout }),
-          { retries: config.settings.retries },
-        );
+        fallbackMeta.set(ep.name, {
+          usedFallback: fb.usedFallback,
+          resolvedTarget: fb.usedFallback ? ep.fallbackDomain : undefined,
+        });
+        return fb.result;
       }
+      const { withRetry } = await import("./probes/retry.js");
+      const result = await withRetry(
+        () => probeHttpHeader(ep.url, ep.headers, { timeout }),
+        { retries: config.settings.retries },
+      );
+      fallbackMeta.set(ep.name, { usedFallback: false });
+      return result;
     };
 
     probeResults = await runProbes(endpoints, { concurrency, probeFn });
     probeEntries = endpoints.map((ep, i) => {
       const r = probeResults![i]!;
+      const meta = fallbackMeta.get(ep.name)!;
       const base = {
         name: ep.name,
         category: ep.category,
         method: ep.method as "cftrace" | "http-header",
         target: ep.method === "cftrace" ? ep.domain : ep.url,
-        usedFallback: false,
+        usedFallback: meta.usedFallback,
+        ...(meta.resolvedTarget ? { resolvedTarget: meta.resolvedTarget } : {}),
       };
       if (r.ok) {
         return {
