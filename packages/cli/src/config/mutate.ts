@@ -120,21 +120,34 @@ export function disableEndpoint(
 ): MutateResult {
   const config = readConfigFile(configPath);
   const endpoints = config.endpoints ?? [];
+  const pingTargets = config.pingTargets ?? [];
 
-  const existing = endpoints.find((e) => e.name === name);
-  if (existing) {
-    existing.disabled = true;
+  const existingEp = endpoints.find((e) => e.name === name);
+  if (existingEp) {
+    existingEp.disabled = true;
     config.endpoints = endpoints;
     writeConfigFile(configPath, config);
     return { ok: true };
   }
 
-  const isBuiltin =
-    BUILTIN_ENDPOINTS.some((b) => b.name === name) ||
-    BUILTIN_PING_TARGETS.some((b) => b.name === name);
+  const existingPt = pingTargets.find((p) => p.name === name);
+  if (existingPt) {
+    existingPt.disabled = true;
+    config.pingTargets = pingTargets;
+    writeConfigFile(configPath, config);
+    return { ok: true };
+  }
 
-  if (isBuiltin) {
+  const isBuiltinEp = BUILTIN_ENDPOINTS.some((b) => b.name === name);
+  if (isBuiltinEp) {
     config.endpoints = [...endpoints, { name, disabled: true }];
+    writeConfigFile(configPath, config);
+    return { ok: true };
+  }
+
+  const isBuiltinPt = BUILTIN_PING_TARGETS.some((b) => b.name === name);
+  if (isBuiltinPt) {
+    config.pingTargets = [...pingTargets, { name, disabled: true }];
     writeConfigFile(configPath, config);
     return { ok: true };
   }
@@ -148,18 +161,34 @@ export function enableEndpoint(
 ): MutateResult {
   const config = readConfigFile(configPath);
   const endpoints = config.endpoints ?? [];
+  const pingTargets = config.pingTargets ?? [];
 
-  const idx = endpoints.findIndex((e) => e.name === name);
-  if (idx >= 0) {
-    const entry = endpoints[idx]!;
+  const epIdx = endpoints.findIndex((e) => e.name === name);
+  if (epIdx >= 0) {
+    const entry = endpoints[epIdx]!;
     const isTombstone =
       entry.disabled === true && !entry.method && !entry.domain && !entry.url;
     if (isTombstone) {
-      endpoints.splice(idx, 1);
+      endpoints.splice(epIdx, 1);
     } else {
       delete entry.disabled;
     }
     config.endpoints = endpoints;
+    writeConfigFile(configPath, config);
+    return { ok: true };
+  }
+
+  const ptIdx = pingTargets.findIndex((p) => p.name === name);
+  if (ptIdx >= 0) {
+    const entry = pingTargets[ptIdx]!;
+    const isTombstone =
+      entry.disabled === true && !entry.url;
+    if (isTombstone) {
+      pingTargets.splice(ptIdx, 1);
+    } else {
+      delete entry.disabled;
+    }
+    config.pingTargets = pingTargets;
     writeConfigFile(configPath, config);
     return { ok: true };
   }
@@ -169,7 +198,7 @@ export function enableEndpoint(
     BUILTIN_PING_TARGETS.some((b) => b.name === name);
 
   if (isBuiltin) {
-    return { ok: true }; // already enabled (no tombstone in config)
+    return { ok: true };
   }
 
   return { ok: false, error: `Endpoint '${name}' not found` };

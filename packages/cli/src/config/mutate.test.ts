@@ -207,6 +207,34 @@ describe("config mutation", () => {
       const result = disableEndpoint(configPath, "nonexistent");
       expect(result.ok).toBe(false);
     });
+
+    it("disables a built-in ping target by adding tombstone", () => {
+      writeFileSync(configPath, JSON.stringify({}));
+      const result = disableEndpoint(configPath, "ping-github");
+      expect(result.ok).toBe(true);
+      const config = readConfig();
+      const entry = config.pingTargets.find(
+        (p: { name: string }) => p.name === "ping-github",
+      );
+      expect(entry).toEqual({ name: "ping-github", disabled: true });
+    });
+
+    it("disables a user ping target preserving config", () => {
+      writeFileSync(
+        configPath,
+        JSON.stringify({
+          pingTargets: [{ name: "my-ping", url: "https://x.com/h", tag: "test" }],
+        }),
+      );
+      const result = disableEndpoint(configPath, "my-ping");
+      expect(result.ok).toBe(true);
+      const config = readConfig();
+      const entry = config.pingTargets.find(
+        (p: { name: string }) => p.name === "my-ping",
+      );
+      expect(entry.disabled).toBe(true);
+      expect(entry.url).toBe("https://x.com/h");
+    });
   });
 
   describe("enableEndpoint", () => {
@@ -265,6 +293,39 @@ describe("config mutation", () => {
       writeFileSync(configPath, JSON.stringify({}));
       const result = enableEndpoint(configPath, "nonexistent");
       expect(result.ok).toBe(false);
+    });
+
+    it("enables a disabled ping target tombstone (removes it)", () => {
+      writeFileSync(
+        configPath,
+        JSON.stringify({
+          pingTargets: [{ name: "ping-github", disabled: true }],
+        }),
+      );
+      const result = enableEndpoint(configPath, "ping-github");
+      expect(result.ok).toBe(true);
+      const config = readConfig();
+      const entry = config.pingTargets?.find(
+        (p: { name: string }) => p.name === "ping-github",
+      );
+      expect(entry).toBeUndefined();
+    });
+
+    it("enables a user ping target (removes disabled flag)", () => {
+      writeFileSync(
+        configPath,
+        JSON.stringify({
+          pingTargets: [{ name: "my-ping", url: "https://x.com/h", tag: "test", disabled: true }],
+        }),
+      );
+      const result = enableEndpoint(configPath, "my-ping");
+      expect(result.ok).toBe(true);
+      const config = readConfig();
+      const entry = config.pingTargets.find(
+        (p: { name: string }) => p.name === "my-ping",
+      );
+      expect(entry.disabled).toBeUndefined();
+      expect(entry.url).toBe("https://x.com/h");
     });
   });
 });
