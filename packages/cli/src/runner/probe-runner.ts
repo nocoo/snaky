@@ -4,6 +4,7 @@ import type { ProbeResult } from "../probes/types.js";
 export type RunnerOpts = {
   concurrency: number;
   probeFn: (endpoint: Endpoint) => Promise<ProbeResult>;
+  onResult?: (index: number, result: ProbeResult) => void;
 };
 
 export async function runProbes(
@@ -18,7 +19,9 @@ export async function runProbes(
   async function worker(): Promise<void> {
     while (nextIdx < endpoints.length) {
       const idx = nextIdx++;
-      results[idx] = await opts.probeFn(endpoints[idx]!);
+      const result = await opts.probeFn(endpoints[idx]!);
+      results[idx] = result;
+      opts.onResult?.(idx, result);
     }
   }
 

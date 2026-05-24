@@ -10,6 +10,7 @@ import { addEndpoint, disableEndpoint, enableEndpoint, removeEndpoint } from "./
 import type { Endpoint } from "./config/types.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
+import type { LiveCallbacks } from "./output/live.js";
 import { formatPingTable, formatProbeTable } from "./output/table.js";
 import type { FullOutput, ProbeEntry } from "./output/types.js";
 import { probeWithFallback } from "./probes/fallback.js";
@@ -244,6 +245,52 @@ async function handleRun(
   }
 
   // Build async tasks
+  const useLiveTui = !flags.json && process.stdout.isTTY;
+  let liveCallbacks: LiveCallbacks | null = null;
+  let liveUnmount: (() => void) | null = null;
+
+  const pingTargets = shouldPing
+    ? config.pingTargets.filter((t) => t.tier <= tier)
+    : [];
+
+  if (useLiveTui) {
+    const { startLiveRenderer } = await import("./output/live.js");
+    const live = startLiveRenderer(
+      shouldProbe ? endpoints.map((e) => e.name) : [],
+      pingTargets.map((t) => t.name),
+    );
+    liveCallbacks = await live.callbacks;
+    liveUnmount = live.unmount;
+  }
+
+  const buildProbeEntry = (ep: Endpoint, r: ProbeResult): ProbeEntry => {
+    const meta = fallbackMeta.get(ep.name)!;
+    const base = {
+      name: ep.name,
+      category: ep.category,
+      method: ep.method as "cftrace" | "http-header",
+      target: ep.method === "cftrace" ? ep.domain : ep.url,
+      usedFallback: meta.usedFallback,
+      ...(meta.resolvedTarget ? { resolvedTarget: meta.resolvedTarget } : {}),
+    };
+    if (r.ok) {
+      return {
+        ...base,
+        ok: true as const,
+        ip: r.ip,
+        location: r.location,
+        colo: r.colo,
+        responseTimeMs: r.responseTimeMs,
+      };
+    }
+    return {
+      ...base,
+      ok: false as const,
+      responseTimeMs: r.responseTimeMs,
+      error: { code: r.code, message: r.message },
+    };
+  };
+
   const probeTask = shouldProbe
     ? (async () => {
         const probeFn = async (ep: Endpoint): Promise<ProbeResult> => {
@@ -267,51 +314,49 @@ async function handleRun(
           fallbackMeta.set(ep.name, { usedFallback: false });
           return result;
         };
-        return runProbes(endpoints, { concurrency, probeFn });
+        return runProbes(endpoints, {
+          concurrency,
+          probeFn,
+          onResult(index, result) {
+            if (liveCallbacks) {
+              const entry = buildProbeEntry(endpoints[index]!, result);
+              liveCallbacks.setProbeResult(index, entry);
+            }
+          },
+        });
       })()
     : null;
 
   const pingTask = shouldPing
-    ? runPing(config.pingTargets.filter((t) => t.tier <= tier), {
+    ? runPing(pingTargets, {
         rounds: config.settings.pingRounds,
         pingTimeout: config.settings.pingTimeout,
         concurrency,
         pingFn: (url, opts) => probeHttpPing(url, opts),
+        onResult: liveCallbacks
+          ? (_index, _result) => {}
+          : undefined,
       })
     : null;
 
   // Execute concurrently
   [probeResults, pingResults] = await Promise.all([probeTask, pingTask]);
 
+  if (liveCallbacks && pingResults) {
+    liveCallbacks.setPingResults(pingResults);
+  }
+  if (liveCallbacks) {
+    liveCallbacks.setComplete();
+  }
+
+  // Small delay for final render frame
+  if (liveUnmount) {
+    await new Promise((r) => setTimeout(r, 100));
+    liveUnmount();
+  }
+
   if (probeResults) {
-    probeEntries = endpoints.map((ep, i) => {
-      const r = probeResults![i]!;
-      const meta = fallbackMeta.get(ep.name)!;
-      const base = {
-        name: ep.name,
-        category: ep.category,
-        method: ep.method as "cftrace" | "http-header",
-        target: ep.method === "cftrace" ? ep.domain : ep.url,
-        usedFallback: meta.usedFallback,
-        ...(meta.resolvedTarget ? { resolvedTarget: meta.resolvedTarget } : {}),
-      };
-      if (r.ok) {
-        return {
-          ...base,
-          ok: true as const,
-          ip: r.ip,
-          location: r.location,
-          colo: r.colo,
-          responseTimeMs: r.responseTimeMs,
-        };
-      }
-      return {
-        ...base,
-        ok: false as const,
-        responseTimeMs: r.responseTimeMs,
-        error: { code: r.code, message: r.message },
-      };
-    });
+    probeEntries = endpoints.map((ep, i) => buildProbeEntry(ep, probeResults![i]!));
   }
 
   // Output
@@ -333,7 +378,20 @@ async function handleRun(
       ping: pingResults ? { results: pingResults } : null,
     };
     process.stdout.write(`${formatJson(output)}\n`);
+  } else if (!useLiveTui) {
+    if (pingResults) {
+      process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
+    }
+    if (probeEntries) {
+      if (pingResults) process.stdout.write("\n");
+      const uniqueIps = buildUniqueSummary(probeResults ?? []);
+      process.stdout.write(
+        formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
+      );
+    }
   } else {
+    // Live TUI already displayed results; print static summary for scroll-back
+    process.stdout.write("\n");
     if (pingResults) {
       process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
     }

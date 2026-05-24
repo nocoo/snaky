@@ -5,6 +5,7 @@ export type PingRunnerOpts = {
   pingTimeout: number;
   concurrency: number;
   pingFn: (url: string, opts: { timeout: number }) => Promise<number>;
+  onResult?: (index: number, result: PingResult) => void;
 };
 
 export type PingResult = {
@@ -35,7 +36,7 @@ export async function runPing(
     }
   }
 
-  return targets.map((target, i) => {
+  const finalResults = targets.map((target, i) => {
     const rounds = roundResults[i]!;
     const successful = rounds.filter((r) => r >= 0).sort((a, b) => a - b);
 
@@ -61,6 +62,12 @@ export async function runPing(
       rounds,
     };
   });
+
+  for (let i = 0; i < finalResults.length; i++) {
+    opts.onResult?.(i, finalResults[i]!);
+  }
+
+  return finalResults;
 }
 
 async function runRound(
