@@ -196,6 +196,30 @@ describe("parseCliArgs", () => {
     if (result.ok) expect(result.flags.config).toBe("/tmp/config.json");
   });
 
+  it("--tier flag", () => {
+    const result = parseCliArgs(["--tier", "2"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.flags.tier).toBe(2);
+  });
+
+  it("--tier rejects 0", () => {
+    const result = parseCliArgs(["--tier", "0"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--tier/);
+  });
+
+  it("--tier rejects value above 9", () => {
+    const result = parseCliArgs(["--tier", "10"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--tier/);
+  });
+
+  it("--tier rejects non-integer", () => {
+    const result = parseCliArgs(["--tier", "1.5"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--tier/);
+  });
+
   it("--version flag", () => {
     const result = parseCliArgs(["--version"]);
     expect(result.ok).toBe(true);

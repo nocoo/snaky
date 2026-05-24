@@ -190,6 +190,7 @@ async function handleRun(
     timeout?: number;
     concurrency?: number;
     category?: string;
+    tier?: number;
     config?: string;
   },
   configPath: string,
@@ -207,6 +208,7 @@ async function handleRun(
   const config = loaded.config;
   const timeout = flags.timeout ?? config.settings.timeout;
   const concurrency = flags.concurrency ?? config.settings.concurrency;
+  const tier = flags.tier ?? config.settings.tier;
 
   let probeResults: ProbeResult[] | null = null;
   let probeEntries: ProbeEntry[] | null = null;
@@ -221,7 +223,7 @@ async function handleRun(
   const fallbackMeta = new Map<string, FallbackMeta>();
 
   if (shouldProbe) {
-    endpoints = config.endpoints;
+    endpoints = config.endpoints.filter((e) => e.tier <= tier);
 
     if (flags.category) {
       endpoints = endpoints.filter((e) => e.category === flags.category);
@@ -270,7 +272,7 @@ async function handleRun(
     : null;
 
   const pingTask = shouldPing
-    ? runPing(config.pingTargets, {
+    ? runPing(config.pingTargets.filter((t) => t.tier <= tier), {
         rounds: config.settings.pingRounds,
         pingTimeout: config.settings.pingTimeout,
         concurrency,
@@ -367,6 +369,7 @@ Options:
   --json              Output JSON to stdout
   --timeout <ms>      Per-endpoint timeout (default: 5000)
   --concurrency <n>   Max parallel requests (default: 10)
+  --tier <n>          Max endpoint tier to include (default: 1)
   --config <path>     Custom config file path
   --category <cat>    Filter by category
   --no-color          Disable colored output

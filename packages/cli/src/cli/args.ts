@@ -33,6 +33,7 @@ export type Flags = {
   concurrency?: number;
   config?: string;
   category?: string;
+  tier?: number;
 };
 
 export type ParseSuccess = {
@@ -60,6 +61,7 @@ export function parseCliArgs(argv: string[]): ParseResult {
         concurrency: { type: "string" },
         config: { type: "string" },
         category: { type: "string" },
+        tier: { type: "string" },
         version: { type: "boolean", default: false },
         help: { type: "boolean", default: false },
         method: { type: "string" },
@@ -97,6 +99,13 @@ export function parseCliArgs(argv: string[]): ParseResult {
   }
   if (parsed.values.category) {
     flags.category = parsed.values.category as string;
+  }
+  if (parsed.values.tier) {
+    const v = Number(parsed.values.tier as string);
+    if (!Number.isInteger(v) || v < 1 || v > 9) {
+      return { ok: false, error: "--tier must be an integer between 1 and 9" };
+    }
+    flags.tier = v;
   }
 
   if (parsed.values.version) {
