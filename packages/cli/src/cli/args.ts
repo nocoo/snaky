@@ -49,7 +49,7 @@ export type ParseFailure = {
 export type ParseResult = ParseSuccess | ParseFailure;
 
 export function parseCliArgs(argv: string[]): ParseResult {
-  let parsed;
+  let parsed: ReturnType<typeof nodeParseArgs>;
   try {
     parsed = nodeParseArgs({
       args: argv,

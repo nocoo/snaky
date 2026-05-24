@@ -1,27 +1,17 @@
-import { describe, it, expect, vi } from "vitest";
-import { runProbes } from "./probe-runner.js";
+import { describe, expect, it, vi } from "vitest";
 import type { Endpoint } from "../config/types.js";
 import type { ProbeResult } from "../probes/types.js";
+import { runProbes } from "./probe-runner.js";
 
 function makeCfEndpoint(name: string): Endpoint {
   return { name, method: "cftrace", domain: `${name}.com`, category: "test" };
-}
-
-function makeHeaderEndpoint(name: string): Endpoint {
-  return {
-    name,
-    method: "http-header",
-    url: `https://${name}.com/check`,
-    headers: ["x-ip"],
-    category: "test",
-  };
 }
 
 describe("runProbes", () => {
   it("runs all endpoints and returns results", async () => {
     const endpoints = [makeCfEndpoint("a"), makeCfEndpoint("b")];
     const probeFn = vi.fn<(ep: Endpoint) => Promise<ProbeResult>>().mockImplementation(
-      async (ep) => ({
+      async (_ep) => ({
         ok: true as const,
         ip: "1.2.3.4",
         location: "US",
@@ -32,7 +22,7 @@ describe("runProbes", () => {
 
     const results = await runProbes(endpoints, { concurrency: 10, probeFn });
     expect(results).toHaveLength(2);
-    expect(results[0]!.ok).toBe(true);
+    expect(results[0]?.ok).toBe(true);
     expect(probeFn).toHaveBeenCalledTimes(2);
   });
 

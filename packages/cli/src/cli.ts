@@ -1,26 +1,24 @@
-import { join } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import type { AddCommand, NameCommand, RunCommand } from "./cli/args.js";
 import { parseCliArgs } from "./cli/args.js";
-import type { RunCommand, AddCommand, NameCommand } from "./cli/args.js";
 import { computeExitCode } from "./cli/exit-code.js";
-import { loadConfig } from "./config/loader.js";
-import { addEndpoint, removeEndpoint, disableEndpoint, enableEndpoint } from "./config/mutate.js";
-import { normalizeDomain } from "./normalize.js";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./config/builtins.js";
-import { runProbes } from "./runner/probe-runner.js";
-import { runPing } from "./runner/ping-runner.js";
-import { buildUniqueSummary } from "./runner/summary.js";
-import { probeCftrace } from "./probes/cftrace.js";
+import { loadConfig } from "./config/loader.js";
+import { addEndpoint, disableEndpoint, enableEndpoint, removeEndpoint } from "./config/mutate.js";
+import type { Endpoint } from "./config/types.js";
+import { normalizeDomain } from "./normalize.js";
+import { formatJson } from "./output/json.js";
+import { formatPingTable, formatProbeTable } from "./output/table.js";
+import type { FullOutput, ProbeEntry } from "./output/types.js";
+import { probeWithFallback } from "./probes/fallback.js";
 import { probeHttpHeader } from "./probes/http-header.js";
 import { probeHttpPing } from "./probes/http-ping.js";
-import { probeWithFallback } from "./probes/fallback.js";
-import { formatJson } from "./output/json.js";
-import { formatProbeTable, formatPingTable } from "./output/table.js";
-import type { Endpoint } from "./config/types.js";
 import type { ProbeResult } from "./probes/types.js";
-import type { ProbeEntry, FullOutput } from "./output/types.js";
-import { existsSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { runPing } from "./runner/ping-runner.js";
+import { runProbes } from "./runner/probe-runner.js";
+import { buildUniqueSummary } from "./runner/summary.js";
 
 const VERSION = "0.1.0";
 const DEFAULT_CONFIG_PATH = join(homedir(), ".config", "snaky", "config.json");
@@ -57,7 +55,7 @@ export async function main(argv: string[]): Promise<number> {
     }
     const dir = dirname(configPath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(configPath, JSON.stringify({}, null, 2) + "\n");
+    writeFileSync(configPath, `${JSON.stringify({}, null, 2)}\n`);
     process.stdout.write(`Created config file: ${configPath}\n`);
     return 0;
   }
@@ -68,7 +66,7 @@ export async function main(argv: string[]): Promise<number> {
       process.stderr.write(`Error: ${loaded.error}\n`);
       return 3;
     }
-    process.stdout.write(JSON.stringify(loaded.config, null, 2) + "\n");
+    process.stdout.write(`${JSON.stringify(loaded.config, null, 2)}\n`);
     return 0;
   }
 
@@ -91,7 +89,7 @@ export async function main(argv: string[]): Promise<number> {
   return 0;
 }
 
-function handleList(configPath: string, flags: { noColor?: boolean }): number {
+function handleList(configPath: string, _flags: { noColor?: boolean }): number {
   const loaded = loadConfig(existsSync(configPath) ? configPath : undefined);
   if (!loaded.ok) {
     process.stderr.write(`Error: ${loaded.error}\n`);
@@ -117,7 +115,7 @@ function handleList(configPath: string, flags: { noColor?: boolean }): number {
     );
   }
 
-  process.stdout.write(lines.join("\n") + "\n");
+  process.stdout.write(`${lines.join("\n")}\n`);
   return 0;
 }
 
@@ -164,7 +162,7 @@ function handleAdd(command: AddCommand, configPath: string): number {
 }
 
 function handleMutate(command: NameCommand, configPath: string): number {
-  let result;
+  let result: { ok: boolean; error?: string; message?: string };
   if (command.type === "remove") {
     result = removeEndpoint(configPath, command.name);
   } else if (command.type === "disable") {
@@ -308,7 +306,7 @@ async function handleRun(
         : null,
       ping: pingResults ? { results: pingResults } : null,
     };
-    process.stdout.write(formatJson(output) + "\n");
+    process.stdout.write(`${formatJson(output)}\n`);
   } else {
     if (probeEntries) {
       const uniqueIps = buildUniqueSummary(probeResults ?? []);
