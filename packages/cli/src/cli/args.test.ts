@@ -142,6 +142,30 @@ describe("parseCliArgs", () => {
     if (result.ok) expect(result.flags.concurrency).toBe(5);
   });
 
+  it("--timeout rejects non-numeric value", () => {
+    const result = parseCliArgs(["--timeout", "abc"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--timeout/);
+  });
+
+  it("--timeout rejects out-of-range value", () => {
+    const result = parseCliArgs(["--timeout", "50"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/100.*60000/);
+  });
+
+  it("--concurrency rejects 0", () => {
+    const result = parseCliArgs(["--concurrency", "0"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--concurrency/);
+  });
+
+  it("--concurrency rejects value above 20", () => {
+    const result = parseCliArgs(["--concurrency", "100"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/1.*20/);
+  });
+
   it("--no-color flag", () => {
     const result = parseCliArgs(["--no-color"]);
     expect(result.ok).toBe(true);
