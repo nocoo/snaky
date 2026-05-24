@@ -155,6 +155,16 @@ describe("config mutation", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatch(/invalid header name/i);
     });
+
+    it("rejects bare https:// as URL (no hostname)", () => {
+      const result = addEndpoint(configPath, {
+        name: "test",
+        method: "http-ping",
+        url: "https://",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/valid HTTPS URL/i);
+    });
   });
 
   describe("removeEndpoint", () => {

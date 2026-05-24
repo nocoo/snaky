@@ -53,8 +53,13 @@ export function addEndpoint(configPath: string, input: AddInput): MutateResult {
   }
 
   if (input.method === "http-header" || input.method === "http-ping") {
-    if (!input.url.startsWith("https://")) {
-      return { ok: false, error: "URL must be HTTPS" };
+    let valid = false;
+    try {
+      const u = new URL(input.url);
+      valid = u.protocol === "https:" && u.hostname.length > 0;
+    } catch { /* invalid URL */ }
+    if (!valid) {
+      return { ok: false, error: "URL must be a valid HTTPS URL" };
     }
   }
 

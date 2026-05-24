@@ -1,6 +1,15 @@
 const NAME_RE = /^[a-z0-9][a-z0-9._-]{0,62}$/;
 const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
+function isValidHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
 const KNOWN_KEYS = new Set([
   "endpoints",
   "pingTargets",
@@ -136,9 +145,9 @@ function validateEndpoint(
     if (!disabled) {
       if (!ep.url || typeof ep.url !== "string") {
         errors.push(`Endpoint "${name}" (http-header) requires url`);
-      } else if (!ep.url.startsWith("https://")) {
+      } else if (!isValidHttpsUrl(ep.url)) {
         errors.push(
-          `Endpoint "${name}" (http-header) url must be HTTPS`,
+          `Endpoint "${name}" (http-header) url must be a valid HTTPS URL`,
         );
       }
       if (
@@ -190,8 +199,8 @@ function validatePingTarget(
   if (!disabled) {
     if (!pt.url || typeof pt.url !== "string") {
       errors.push(`Ping target "${name}" requires url`);
-    } else if (!pt.url.startsWith("https://")) {
-      errors.push(`Ping target "${name}" url must be HTTPS`);
+    } else if (!isValidHttpsUrl(pt.url)) {
+      errors.push(`Ping target "${name}" url must be a valid HTTPS URL`);
     }
   }
 }

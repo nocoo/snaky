@@ -281,4 +281,22 @@ describe("validateConfig", () => {
     });
     expect(result.ok).toBe(true);
   });
+
+  it("rejects bare https:// as URL (no hostname)", () => {
+    const result = validateConfig({
+      endpoints: [
+        { name: "test", method: "http-header", url: "https://", headers: ["x-ip"] },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/valid HTTPS URL/i);
+  });
+
+  it("rejects bare https:// as ping target URL", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "test", url: "https://" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/valid HTTPS URL/i);
+  });
 });
