@@ -59,8 +59,7 @@ describe("formatProbeTable", () => {
         target: "bad.com",
         usedFallback: false,
         ok: false,
-        code: "TIMEOUT",
-        message: "timeout",
+        error: { code: "TIMEOUT", message: "timeout" },
         responseTimeMs: 5000,
       },
     ];
@@ -89,8 +88,7 @@ describe("formatProbeTable", () => {
         target: "b.com",
         usedFallback: false,
         ok: false,
-        code: "TIMEOUT",
-        message: "timeout",
+        error: { code: "TIMEOUT", message: "timeout" },
         responseTimeMs: 5000,
       },
     ];

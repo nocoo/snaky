@@ -264,16 +264,26 @@ async function handleRun(
       const base = {
         name: ep.name,
         category: ep.category,
-        method: ep.method,
+        method: ep.method as "cftrace" | "http-header",
         target: ep.method === "cftrace" ? ep.domain : ep.url,
         usedFallback: false,
       };
-      // Check if fallback was used (cftrace with fallbackDomain where primary failed)
-      if (ep.method === "cftrace" && ep.fallbackDomain && r.ok) {
-        // If we got success and there was a fallback configured, check if primary would have worked
-        // Actually, we need to track this differently. For now mark based on the probe logic
+      if (r.ok) {
+        return {
+          ...base,
+          ok: true as const,
+          ip: r.ip,
+          location: r.location,
+          colo: r.colo,
+          responseTimeMs: r.responseTimeMs,
+        };
       }
-      return { ...base, ...r } as ProbeEntry;
+      return {
+        ...base,
+        ok: false as const,
+        responseTimeMs: r.responseTimeMs,
+        error: { code: r.code, message: r.message },
+      };
     });
   }
 

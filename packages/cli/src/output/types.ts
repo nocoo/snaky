@@ -1,15 +1,30 @@
-import type { ProbeResult } from "../probes/types.js";
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
 
-export type ProbeEntry = {
+type ProbeEntryBase = {
   name: string;
   category: string;
   method: "cftrace" | "http-header";
   target: string;
   resolvedTarget?: string;
   usedFallback: boolean;
-} & ProbeResult;
+};
+
+export type ProbeEntrySuccess = ProbeEntryBase & {
+  ok: true;
+  ip: string;
+  location: string | null;
+  colo: string | null;
+  responseTimeMs: number;
+};
+
+export type ProbeEntryFailure = ProbeEntryBase & {
+  ok: false;
+  responseTimeMs: number | null;
+  error: { code: string; message: string };
+};
+
+export type ProbeEntry = ProbeEntrySuccess | ProbeEntryFailure;
 
 export type ProbeSectionOutput = {
   results: ProbeEntry[];

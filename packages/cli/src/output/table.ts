@@ -43,7 +43,7 @@ export function formatProbeTable(
           "—",
           "—",
           "—",
-          colorize(entry.code, "red", opts),
+          colorize(entry.error.code, "red", opts),
         ]),
       );
     }

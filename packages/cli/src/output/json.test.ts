@@ -77,7 +77,7 @@ describe("formatJson", () => {
     expect(parsed.ping).toBeDefined();
   });
 
-  it("includes responseTimeMs: null for connection-level failures", () => {
+  it("includes error object and responseTimeMs: null for connection-level failures", () => {
     const output: FullOutput = {
       mode: "probe",
       probe: {
@@ -89,8 +89,7 @@ describe("formatJson", () => {
             target: "bad.com",
             usedFallback: false,
             ok: false,
-            code: "DNS_FAILED",
-            message: "DNS failed",
+            error: { code: "DNS_FAILED", message: "DNS failed" },
             responseTimeMs: null,
           },
         ],
@@ -103,6 +102,9 @@ describe("formatJson", () => {
     const json = formatJson(output);
     const parsed = JSON.parse(json);
     expect(parsed.probe.results[0].responseTimeMs).toBeNull();
+    expect(parsed.probe.results[0].error.code).toBe("DNS_FAILED");
+    expect(parsed.probe.results[0].error.message).toBe("DNS failed");
+    expect(parsed.probe.results[0].code).toBeUndefined();
   });
 
   it("includes resolvedTarget when fallback used", () => {
