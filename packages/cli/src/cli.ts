@@ -334,15 +334,15 @@ async function handleRun(
     };
     process.stdout.write(`${formatJson(output)}\n`);
   } else {
+    if (pingResults) {
+      process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
+    }
     if (probeEntries) {
+      if (pingResults) process.stdout.write("\n");
       const uniqueIps = buildUniqueSummary(probeResults ?? []);
       process.stdout.write(
         formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
       );
-    }
-    if (pingResults) {
-      if (probeEntries) process.stdout.write("\n");
-      process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
     }
   }
 
