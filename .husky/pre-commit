@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+# G1: Static analysis (tsc + biome) || L1: Unit tests
+# Both must pass; run in parallel for speed (<30s target)
+
+pnpm --filter @nocoo/snaky typecheck &
+pid_typecheck=$!
+
+pnpm --filter @nocoo/snaky lint &
+pid_lint=$!
+
+pnpm --filter @nocoo/snaky test &
+pid_test=$!
+
+fail=0
+wait $pid_typecheck || fail=1
+wait $pid_lint || fail=1
+wait $pid_test || fail=1
+
+exit $fail

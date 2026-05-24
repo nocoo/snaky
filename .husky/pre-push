@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+
+# L2: E2E tests || G2: Security (gitleaks + osv-scanner)
+# Both must pass; run in parallel (<3min target)
+
+# L2: E2E integration tests (requires build)
+(pnpm --filter @nocoo/snaky build && pnpm --filter @nocoo/snaky test:e2e) &
+pid_e2e=$!
+
+# G2: Security scanning
+(
+  fail_g2=0
+
+  if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks detect --no-banner --source . || fail_g2=1
+  else
+    echo "⚠ gitleaks not installed, skipping secret scan"
+  fi
+
+  if command -v osv-scanner >/dev/null 2>&1; then
+    osv-scanner --lockfile=pnpm-lock.yaml || fail_g2=1
+  else
+    echo "⚠ osv-scanner not installed, skipping vulnerability scan"
+  fi
+
+  exit $fail_g2
+) &
+pid_g2=$!
+
+fail=0
+wait $pid_e2e || fail=1
+wait $pid_g2 || fail=1
+
+exit $fail
