@@ -5,9 +5,16 @@
     "build": "pnpm --filter @nocoo/snaky build",
     "dev": "pnpm --filter @nocoo/snaky dev",
     "test": "pnpm --filter @nocoo/snaky test",
-    "test:coverage": "pnpm --filter @nocoo/snaky test:coverage"
+    "test:coverage": "pnpm --filter @nocoo/snaky test:coverage",
+    "test:e2e": "pnpm --filter @nocoo/snaky test:e2e",
+    "lint": "pnpm --filter @nocoo/snaky lint",
+    "typecheck": "pnpm --filter @nocoo/snaky typecheck",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
