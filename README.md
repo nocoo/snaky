@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" width="128" height="128"/></p>
+
 <h1 align="center">Snaky</h1>
 
 <p align="center"><strong>VPN 分流路由探测器</strong><br>探测出口 IP · 测量连接延迟 · 验证分流规则</p>
