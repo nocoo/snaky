@@ -299,4 +299,34 @@ describe("validateConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[0]).toMatch(/valid HTTPS URL/i);
   });
+
+  it("rejects non-array endpoints (object)", () => {
+    const result = validateConfig({ endpoints: {} });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/endpoints must be an array/);
+  });
+
+  it("rejects non-array endpoints (string)", () => {
+    const result = validateConfig({ endpoints: "bad" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/endpoints must be an array/);
+  });
+
+  it("rejects non-array endpoints (null)", () => {
+    const result = validateConfig({ endpoints: null });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/endpoints must be an array/);
+  });
+
+  it("rejects non-array pingTargets (object)", () => {
+    const result = validateConfig({ pingTargets: {} });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/pingTargets must be an array/);
+  });
+
+  it("rejects non-array pingTargets (number)", () => {
+    const result = validateConfig({ pingTargets: 42 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/pingTargets must be an array/);
+  });
 });

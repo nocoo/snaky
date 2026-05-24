@@ -60,15 +60,23 @@ export function validateConfig(raw: Record<string, unknown>): ValidationResult {
 
   const allNames = new Set<string>();
 
-  if ("endpoints" in raw && Array.isArray(raw.endpoints)) {
-    for (const ep of raw.endpoints as Record<string, unknown>[]) {
-      validateEndpoint(ep, allNames, errors);
+  if ("endpoints" in raw) {
+    if (!Array.isArray(raw.endpoints)) {
+      errors.push("endpoints must be an array");
+    } else {
+      for (const ep of raw.endpoints as Record<string, unknown>[]) {
+        validateEndpoint(ep, allNames, errors);
+      }
     }
   }
 
-  if ("pingTargets" in raw && Array.isArray(raw.pingTargets)) {
-    for (const pt of raw.pingTargets as Record<string, unknown>[]) {
-      validatePingTarget(pt, allNames, errors);
+  if ("pingTargets" in raw) {
+    if (!Array.isArray(raw.pingTargets)) {
+      errors.push("pingTargets must be an array");
+    } else {
+      for (const pt of raw.pingTargets as Record<string, unknown>[]) {
+        validatePingTarget(pt, allNames, errors);
+      }
     }
   }
 
