@@ -211,9 +211,16 @@ async function handleRun(
   let probeEntries: ProbeEntry[] | null = null;
   let pingResults: import("./runner/ping-runner.js").PingResult[] | null = null;
 
-  // Run probes
-  if (command.mode === "all" || command.mode === "probe") {
-    let endpoints = config.endpoints;
+  const shouldProbe = command.mode === "all" || command.mode === "probe";
+  const shouldPing = command.mode === "all" || command.mode === "ping";
+
+  // Resolve endpoints (synchronous validation — may exit 3)
+  let endpoints: Endpoint[] = [];
+  type FallbackMeta = { usedFallback: boolean; resolvedTarget?: string };
+  const fallbackMeta = new Map<string, FallbackMeta>();
+
+  if (shouldProbe) {
+    endpoints = config.endpoints;
 
     if (flags.category) {
       endpoints = endpoints.filter((e) => e.category === flags.category);
@@ -231,33 +238,49 @@ async function handleRun(
       }
       endpoints = selected;
     }
+  }
 
-    type FallbackMeta = { usedFallback: boolean; resolvedTarget?: string };
-    const fallbackMeta = new Map<string, FallbackMeta>();
+  // Build async tasks
+  const probeTask = shouldProbe
+    ? (async () => {
+        const probeFn = async (ep: Endpoint): Promise<ProbeResult> => {
+          if (ep.method === "cftrace") {
+            const fb = await probeWithFallback(
+              `https://${ep.domain}`,
+              ep.fallbackDomain ? `https://${ep.fallbackDomain}` : undefined,
+              { timeout, retries: config.settings.retries },
+            );
+            fallbackMeta.set(ep.name, {
+              usedFallback: fb.usedFallback,
+              resolvedTarget: fb.usedFallback ? ep.fallbackDomain : undefined,
+            });
+            return fb.result;
+          }
+          const { withRetry } = await import("./probes/retry.js");
+          const result = await withRetry(
+            () => probeHttpHeader(ep.url, ep.headers, { timeout }),
+            { retries: config.settings.retries },
+          );
+          fallbackMeta.set(ep.name, { usedFallback: false });
+          return result;
+        };
+        return runProbes(endpoints, { concurrency, probeFn });
+      })()
+    : null;
 
-    const probeFn = async (ep: Endpoint): Promise<ProbeResult> => {
-      if (ep.method === "cftrace") {
-        const fb = await probeWithFallback(
-          `https://${ep.domain}`,
-          ep.fallbackDomain ? `https://${ep.fallbackDomain}` : undefined,
-          { timeout, retries: config.settings.retries },
-        );
-        fallbackMeta.set(ep.name, {
-          usedFallback: fb.usedFallback,
-          resolvedTarget: fb.usedFallback ? ep.fallbackDomain : undefined,
-        });
-        return fb.result;
-      }
-      const { withRetry } = await import("./probes/retry.js");
-      const result = await withRetry(
-        () => probeHttpHeader(ep.url, ep.headers, { timeout }),
-        { retries: config.settings.retries },
-      );
-      fallbackMeta.set(ep.name, { usedFallback: false });
-      return result;
-    };
+  const pingTask = shouldPing
+    ? runPing(config.pingTargets, {
+        rounds: config.settings.pingRounds,
+        pingTimeout: config.settings.pingTimeout,
+        concurrency,
+        pingFn: (url, opts) => probeHttpPing(url, opts),
+      })
+    : null;
 
-    probeResults = await runProbes(endpoints, { concurrency, probeFn });
+  // Execute concurrently
+  [probeResults, pingResults] = await Promise.all([probeTask, pingTask]);
+
+  if (probeResults) {
     probeEntries = endpoints.map((ep, i) => {
       const r = probeResults![i]!;
       const meta = fallbackMeta.get(ep.name)!;
@@ -285,17 +308,6 @@ async function handleRun(
         responseTimeMs: r.responseTimeMs,
         error: { code: r.code, message: r.message },
       };
-    });
-  }
-
-  // Run ping
-  if (command.mode === "all" || command.mode === "ping") {
-    const targets = config.pingTargets;
-    pingResults = await runPing(targets, {
-      rounds: config.settings.pingRounds,
-      pingTimeout: config.settings.pingTimeout,
-      concurrency,
-      pingFn: (url, opts) => probeHttpPing(url, opts),
     });
   }
 
