@@ -941,3 +941,304 @@ Priority order (stop at first success):
 - GeoIP lookup in CLI (rich geo display is app/web concern, not CLI)
 - Browser-only detection methods (e.g., Alibaba JSONP/DNS detection — requires DOM/script execution)
 - Parsing compound IP header values (comma-separated, port-suffixed)
+
+---
+
+## TDD Implementation Plan
+
+Test-Driven Development with **95%+ line coverage** target for CLI package. Each step follows red-green-refactor: write failing tests first, then implement to pass, then commit.
+
+### Coverage Requirements
+
+- **Line coverage:** ≥ 95%
+- **Branch coverage:** ≥ 90%
+- **Uncovered allowlist (explicit):** Only `src/cli.ts` entry point bootstrap (process.argv parsing top-level) and fatal unhandled rejection handler may be excluded. Everything else must be covered.
+- **Coverage tool:** `vitest --coverage` with `@vitest/coverage-v8`
+- **CI gate:** Coverage below threshold fails the build
+
+### Atomic Commit Sequence
+
+Each numbered step = one atomic commit. Test file committed together with (or before) implementation. Format: `test: ...` or `feat: ...` or `refactor: ...`.
+
+---
+
+#### Phase 0: Project Scaffolding
+
+**Step 0.1** — `chore: init monorepo and cli package skeleton`
+- Root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`
+- `packages/cli/package.json` (name: `@nocoo/snaky`, type: module)
+- `packages/cli/tsconfig.json` (strict, ESM)
+- `packages/cli/src/index.ts` (empty entry)
+- `packages/cli/vitest.config.ts` (coverage enabled, thresholds set)
+- No tests yet — scaffolding only
+
+**Step 0.2** — `chore: add build tooling (tsup) and dev scripts`
+- `packages/cli/tsup.config.ts`
+- Scripts: `build`, `dev`, `test`, `test:coverage`
+- Verify `pnpm build` produces `dist/index.js`
+
+---
+
+#### Phase 1: Core Parsers (Pure Functions, No I/O)
+
+**Step 1.1** — `test: cftrace response parser`
+```
+packages/cli/src/parsers/cftrace.ts
+packages/cli/src/parsers/cftrace.test.ts
+```
+- Test cases: valid response, missing fields, garbage input, empty body, partial (ip only)
+- Implementation: `parseCfTrace(body: string): CfTraceResult | ParseError`
+
+**Step 1.2** — `test: http-header IP extraction`
+```
+packages/cli/src/parsers/http-header.ts
+packages/cli/src/parsers/http-header.test.ts
+```
+- Test cases: valid IPv4, valid IPv6, comma-separated (PARSE_ERROR), port suffix (PARSE_ERROR), empty, missing header
+- Implementation: `extractIpFromHeaders(headers: Headers, headerNames: string[]): string | HeaderError`
+
+**Step 1.3** — `test: domain/URL normalization`
+```
+packages/cli/src/normalize.ts
+packages/cli/src/normalize.test.ts
+```
+- Test cases: bare domain, full URL, with path, http → domain, ftp reject, port reject, trailing slash
+- Implementation: `normalizeDomain(input: string): string | NormalizeError`
+
+**Step 1.4** — `test: IP address validation`
+```
+packages/cli/src/validators/ip.ts
+packages/cli/src/validators/ip.test.ts
+```
+- Test cases: valid IPv4, valid IPv6, IPv4-mapped IPv6, garbage, empty, with port
+- Implementation: `isValidIp(value: string): boolean`
+
+---
+
+#### Phase 2: Configuration
+
+**Step 2.1** — `test: config schema validation`
+```
+packages/cli/src/config/schema.ts
+packages/cli/src/config/schema.test.ts
+```
+- Test cases: valid config, missing required fields, invalid name regex, duplicate names, out-of-range timeout/concurrency, unknown keys (warning), disabled entry without method
+- Implementation: `validateConfig(raw: unknown): Config | ConfigError[]`
+
+**Step 2.2** — `test: config file loading and defaults merge`
+```
+packages/cli/src/config/loader.ts
+packages/cli/src/config/loader.test.ts
+```
+- Test cases: file missing (defaults), valid file merged, malformed JSON, name collision (user wins), disabled built-in, disabled user endpoint preserved
+- Uses temp directory fixtures
+- Implementation: `loadConfig(path?: string): EffectiveConfig`
+
+**Step 2.3** — `test: config mutation (add/remove/disable/enable)`
+```
+packages/cli/src/config/mutate.ts
+packages/cli/src/config/mutate.test.ts
+```
+- Test cases: add cftrace, add http-header, add http-ping (to pingTargets), remove user, remove override (built-in resurfaces), remove pure built-in (error), disable built-in, disable user (preserves config), enable tombstone, enable user endpoint, idempotent ops
+- Implementation: mutate functions that read/write config file
+
+---
+
+#### Phase 3: Probe Execution Engine
+
+**Step 3.1** — `test: cftrace probe (integration with mock server)`
+```
+packages/cli/src/probes/cftrace.ts
+packages/cli/src/probes/cftrace.test.ts
+```
+- Mock HTTP server returning valid trace, timeout (delayed response), redirect (3xx), DNS error (mock), non-2xx
+- Implementation: `probeCftrace(domain: string, opts: ProbeOpts): ProbeResult`
+
+**Step 3.2** — `test: http-header probe (integration with mock server)`
+```
+packages/cli/src/probes/http-header.ts
+packages/cli/src/probes/http-header.test.ts
+```
+- Mock HEAD responses with/without expected headers
+- Implementation: `probeHttpHeader(url: string, headers: string[], opts: ProbeOpts): ProbeResult`
+
+**Step 3.3** — `test: http-ping probe (integration with mock server)`
+```
+packages/cli/src/probes/http-ping.ts
+packages/cli/src/probes/http-ping.test.ts
+```
+- Mock responses: 200, 204, 403, 3xx (followed), timeout, connection refused
+- Implementation: `probeHttpPing(url: string, opts: PingOpts): number | -1`
+
+**Step 3.4** — `test: fallback domain logic`
+```
+packages/cli/src/probes/fallback.ts
+packages/cli/src/probes/fallback.test.ts
+```
+- Test cases: primary succeeds (no fallback), primary fails + fallback succeeds, primary fails + fallback exhausts retries, responseTimeMs is from final request
+- Implementation: `probeWithFallback(primary: string, fallback: string, opts: ProbeOpts): ProbeResult`
+
+**Step 3.5** — `test: retry logic with backoff`
+```
+packages/cli/src/probes/retry.ts
+packages/cli/src/probes/retry.test.ts
+```
+- Test cases: succeeds on first try (no retry), fails then succeeds on retry, exhausts all retries, backoff timing (mock timers), slot held during backoff
+- Implementation: `withRetry<T>(fn: () => Promise<T>, opts: RetryOpts): Promise<T>`
+
+---
+
+#### Phase 4: Orchestration
+
+**Step 4.1** — `test: concurrent probe runner`
+```
+packages/cli/src/runner/probe-runner.ts
+packages/cli/src/runner/probe-runner.test.ts
+```
+- Test cases: concurrency limit respected, all succeed, partial failure, all fail, empty endpoint list
+- Uses mock probes (no real HTTP)
+- Implementation: `runProbes(endpoints: Endpoint[], opts: RunnerOpts): ProbeResult[]`
+
+**Step 4.2** — `test: ping runner (multi-round)`
+```
+packages/cli/src/runner/ping-runner.ts
+packages/cli/src/runner/ping-runner.test.ts
+```
+- Test cases: warmup excluded, 12 rounds, median calculation, all failed → ALL_FAILED, partial success, concurrent within round
+- Uses mock ping function
+- Implementation: `runPing(targets: PingTarget[], opts: PingRunnerOpts): PingResult[]`
+
+**Step 4.3** — `test: unique IPs summary builder`
+```
+packages/cli/src/runner/summary.ts
+packages/cli/src/runner/summary.test.ts
+```
+- Test cases: dedup by IP, count aggregation, null location from http-header, sort by count desc
+- Implementation: `buildUniqueSummary(results: ProbeResult[]): UniqueIp[]`
+
+---
+
+#### Phase 5: Output Formatting
+
+**Step 5.1** — `test: JSON output serialization`
+```
+packages/cli/src/output/json.ts
+packages/cli/src/output/json.test.ts
+```
+- Test cases: mode=all/probe/ping, null sections, responseTimeMs null vs number, snapshot tests against golden files
+- Implementation: `formatJson(mode, probeResults, pingResults): string`
+
+**Step 5.2** — `test: table output formatting`
+```
+packages/cli/src/output/table.ts
+packages/cli/src/output/table.test.ts
+```
+- Test cases: success rows, failure rows, null location (—), summary line, no-color mode, empty results
+- Snapshot tests against golden files
+- Implementation: `formatTable(probeResults, pingResults, opts): string`
+
+---
+
+#### Phase 6: CLI Entry Point
+
+**Step 6.1** — `test: argument parsing`
+```
+packages/cli/src/cli/args.ts
+packages/cli/src/cli/args.test.ts
+```
+- Test cases: no args (all mode), `probe name1 name2`, `ping`, `list`, `add` variants, `--json`, `--timeout`, `--category`, `--help`, `--version`, invalid combinations
+- Implementation: `parseArgs(argv: string[]): ParsedCommand`
+
+**Step 6.2** — `test: exit code logic`
+```
+packages/cli/src/cli/exit-code.ts
+packages/cli/src/cli/exit-code.test.ts
+```
+- Test cases: all success → 0, partial → 1, all fail → 2, fatal → 3, empty → 0, ping-only failure in all mode → 0
+- Implementation: `computeExitCode(mode, probeResults, pingResults): number`
+
+**Step 6.3** — `feat: wire CLI entry point`
+```
+packages/cli/src/cli.ts (entry)
+```
+- Connects args → config → runner → output → exit
+- E2E test: invoke built binary, verify JSON output and exit codes
+
+---
+
+#### Phase 7: E2E & Snapshots
+
+**Step 7.1** — `test: binary invocation E2E`
+```
+packages/cli/tests/e2e/binary.test.ts
+```
+- Spawn `node dist/index.js` with mock server
+- Verify: JSON output structure, exit codes, stderr behavior
+- Verify: `--help` and `--version` output
+
+**Step 7.2** — `test: golden file snapshots`
+```
+packages/cli/tests/snapshots/
+```
+- Commit golden files for all output scenarios
+- Snapshot tests compare output against committed files
+- `pnpm test:update-snapshots` regenerates
+
+**Step 7.3** — `chore: verify coverage threshold`
+- Run `pnpm test:coverage`
+- Ensure ≥ 95% line, ≥ 90% branch
+- Add coverage badge to README
+
+---
+
+#### Phase 8: macOS App (Separate Track)
+
+**Step 8.1** — `chore: init Xcode project`
+- `apps/macos/Snaky.xcodeproj` with SwiftUI menu bar app skeleton
+
+**Step 8.2** — `test: CLI JSON response parsing (Swift)`
+- XCTest with fixture JSON files (copied from CLI golden files)
+- `Codable` struct definitions matching CLI JSON schema
+
+**Step 8.3** — `feat: CLI discovery and invocation`
+**Step 8.4** — `feat: menu bar UI with probe results`
+**Step 8.5** — `feat: preferences and auto-refresh`
+
+---
+
+### Commit Message Convention
+
+```
+<type>: <short description>
+
+Types:
+  chore:    tooling, config, scaffolding (no production logic)
+  test:     add or update tests (may include minimal implementation stubs to compile)
+  feat:     implement feature to pass existing tests
+  fix:      fix a failing test or bug
+  refactor: restructure without changing behavior (tests still pass)
+```
+
+### TDD Workflow Per Step
+
+1. **Red:** Write test(s) that describe the expected behavior. Run tests — they MUST fail.
+2. **Green:** Write the minimum implementation to make tests pass. No premature optimization.
+3. **Refactor:** Clean up implementation while keeping tests green. Extract types, rename, simplify.
+4. **Commit:** One atomic commit with test + implementation. Message reflects what was added.
+5. **Coverage check:** After each step, `pnpm test:coverage` must not regress below threshold.
+
+### Dependency Graph
+
+```
+Phase 0 (scaffold)
+  └─ Phase 1 (parsers) — no deps, pure functions
+       └─ Phase 2 (config) — depends on validators from Phase 1
+            └─ Phase 3 (probes) — depends on parsers + config types
+                 └─ Phase 4 (orchestration) — depends on probes
+                      └─ Phase 5 (output) — depends on result types
+                           └─ Phase 6 (CLI entry) — depends on everything
+                                └─ Phase 7 (E2E) — validates full stack
+```
+
+Phases 1–3 can be parallelized by different contributors (no cross-dependencies within a phase except step ordering).
+
