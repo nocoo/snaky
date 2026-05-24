@@ -181,4 +181,58 @@ describe("parseCliArgs", () => {
     ]);
     expect(result.ok).toBe(false);
   });
+
+  it("rejects remove without name", () => {
+    const result = parseCliArgs(["remove"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("requires a name");
+  });
+
+  it("rejects disable without name", () => {
+    const result = parseCliArgs(["disable"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects enable without name", () => {
+    const result = parseCliArgs(["enable"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects add without name", () => {
+    const result = parseCliArgs(["add"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects config without subcommand", () => {
+    const result = parseCliArgs(["config"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Unknown config subcommand");
+  });
+
+  it("rejects add --method cftrace without domain", () => {
+    const result = parseCliArgs(["add", "test", "--method", "cftrace"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("domain");
+  });
+
+  it("rejects add without method or domain", () => {
+    const result = parseCliArgs(["add", "test"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("requires a domain or --method");
+  });
+
+  it("rejects add http-header without --url", () => {
+    const result = parseCliArgs(["add", "test", "--method", "http-header", "--header", "x-ip"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects add http-header without --header", () => {
+    const result = parseCliArgs(["add", "test", "--method", "http-header", "--url", "https://x.com"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects add http-ping without --url", () => {
+    const result = parseCliArgs(["add", "test", "--method", "http-ping"]);
+    expect(result.ok).toBe(false);
+  });
 });

@@ -137,4 +137,19 @@ describe("formatPingTable", () => {
     const output = formatPingTable([], { noColor: true });
     expect(output).toContain("No ping targets");
   });
+
+  it("applies color when noColor is false", () => {
+    const results: PingResult[] = [
+      {
+        name: "ping-bad",
+        tag: "test",
+        ok: false,
+        medianMs: null,
+        rounds: [-1],
+        error: { code: "ALL_FAILED", message: "All failed" },
+      },
+    ];
+    const output = formatPingTable(results, { noColor: false });
+    expect(output).toContain("\x1b[31m"); // red escape
+  });
 });

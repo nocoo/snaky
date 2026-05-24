@@ -178,4 +178,46 @@ describe("validateConfig", () => {
       expect(result.ok, `name "${name}" should be valid`).toBe(true);
     }
   });
+
+  it("rejects endpoint missing name", () => {
+    const result = validateConfig({
+      endpoints: [{ method: "cftrace", domain: "x.com" }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects ping target missing name", () => {
+    const result = validateConfig({
+      pingTargets: [{ url: "https://x.com/h", tag: "test" }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects ping target with invalid name", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "INVALID", url: "https://x.com/h", tag: "test" }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects ping target missing url when not disabled", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "test", tag: "test" }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects ping target with non-HTTPS url", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "test", url: "http://x.com/h", tag: "test" }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts disabled ping target without url", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "test", disabled: true }],
+    });
+    expect(result.ok).toBe(true);
+  });
 });
