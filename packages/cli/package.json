@@ -1,6 +1,6 @@
 {
   "name": "@nocoo/snaky",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "IP routing probe & latency tester",
   "type": "module",
   "bin": {
