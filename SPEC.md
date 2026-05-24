@@ -128,9 +128,11 @@ For CDN providers that expose the client IP in a response header (not Cloudflare
 
 For connectivity tests where we only care about reachability and latency, not the exit IP.
 
-**Request:** `GET {url}` with `{ redirect: "manual" }`  
-**Success criteria:** Any HTTP response received — including non-2xx status codes (204, 403, etc.). The `HTTP_ERROR` code does NOT apply to this method.  
+**Request:** `GET {url}` — NOTE: uses default redirect behavior (`{ redirect: "follow" }`) unlike IP probes  
+**Success criteria:** Any HTTP response received (after following redirects) — including non-2xx status codes (204, 403, etc.). A 3xx redirect that is followed and lands on a final response = success. Only network-level failures (timeout, DNS, connection refused, TLS) cause round failure.  
 **Extracts:** `responseTimeMs` only — no IP, no geo.
+
+**Why follow redirects for ping:** Ping measures connectivity, not routing correctness. Many targets (e.g., `taobao.com/favicon.ico`) may redirect. Blocking redirects would make ping falsely report failures for legitimate endpoints.
 
 **Used for:** `snaky ping` targets (GitHub generate_204, YouTube generate_204, Taobao favicon, etc.)
 
@@ -140,7 +142,9 @@ For connectivity tests where we only care about reachability and latency, not th
 
 For all methods:
 1. Record start time
-2. Execute HTTP request per method spec, with `{ redirect: "manual" }`
+2. Execute HTTP request per method spec:
+   - `cftrace` / `http-header`: use `{ redirect: "manual" }` — 3xx = error (`REDIRECT`)
+   - `http-ping`: use `{ redirect: "follow" }` — 3xx followed, final response = success
 3. Record `responseTimeMs`: wall-clock duration from `fetch()` call to response headers received (includes DNS + TCP + TLS + server processing; excludes body read time)
 4. For `cftrace`: read body and parse key=value pairs
 5. For `http-header`: read specified response header(s), validate as IP literal
@@ -151,15 +155,28 @@ For all methods:
 
 **Why `responseTimeMs` not "TTFB":** TTFB has ambiguous definitions across tools (some exclude DNS, some include body). We define it precisely as above and name it unambiguously.
 
+### Fallback Domain Logic
+
+For `cftrace` endpoints with a `fallbackDomain`:
+
+**Ordering: primary once → fallback with full retry budget.**
+1. Try primary domain — ONE attempt only (no retries on primary when fallback exists)
+2. If primary fails → switch to fallback as the effective target
+3. Apply full retry logic (up to `retries` attempts) to the fallback
+
+**Rationale:** If primary is down, retrying it wastes time. Fallback gets the full retry budget because it's the realistic alternative.
+
+**When no fallbackDomain:** Normal retry logic applies to the primary domain directly (up to `retries` attempts).
+
 ### Retry Policy
 
 **Applies to: IP detection probes (`cftrace`, `http-header`) ONLY.**
 
 - Failed probes are retried up to `retries` times (default: 2) with exponential backoff (2s, 4s delay)
 - Retries are per-endpoint and do not block other endpoints
-- The retry count is "in-flight slots" — a retrying endpoint does NOT release its concurrency slot during backoff wait (it holds the slot until final success/failure)
+- A retrying endpoint holds its concurrency worker slot during backoff wait (see Concurrency Model)
 
-**Does NOT apply to:** `http-ping` rounds. Each ping round is independent — a timed-out round is recorded as `-1` and the next round proceeds immediately. No retry.
+**Does NOT apply to:** `http-ping` rounds. Each ping round is independent — a failed round is recorded as `-1` and the next round proceeds immediately. No retry.
 
 ### Timing Bounds
 
@@ -182,7 +199,9 @@ With defaults (28 endpoints, concurrency=10, 2 retries, 12 ping rounds):
 
 ### Concurrency Model
 
-The `concurrency` setting limits **active HTTP requests** (in-flight fetch calls). Endpoints waiting in backoff between retries count as "occupied" — they hold their slot.
+The `concurrency` setting limits **active endpoint workers** (not raw HTTP requests). A worker owns the full lifecycle of one endpoint: initial request → backoff → retry → final result. A worker holds its slot from start until it produces a terminal result (success or all retries exhausted). During backoff sleep, the slot is occupied (no other endpoint can start).
+
+This means: with `concurrency=10` and 28 endpoints, at most 10 endpoints are being processed at any time (some may be in backoff, some actively fetching).
 
 ---
 
@@ -302,18 +321,34 @@ snaky add <name> --method http-header --url <url> --header <header-name>
     # Adds an http-header endpoint. --header can be repeated for multiple headers.
 
 snaky add <name> --method http-ping --url <url>
-    # Adds an http-ping endpoint (connectivity test target).
+    # Adds a ping target (stored in pingTargets, used by `snaky ping`).
 ```
 
 **No mixed-argument form.** The positional `<domain>` argument is only valid for cftrace (the shorthand). For other methods, `--method` is required and `<domain>` positional is forbidden (error if both present).
+
+### Two Config Namespaces
+
+User-added entries are stored in **different config arrays** depending on method:
+- `cftrace` and `http-header` → `config.endpoints[]` — these are **probe targets** (IP detection)
+- `http-ping` → `config.pingTargets[]` — these are **ping targets** (connectivity only)
+
+**Management commands (`list`, `remove`, `disable`, `enable`)** work on BOTH namespaces uniformly:
+- `snaky list` shows all: probe endpoints + ping targets, with a `type` column (`probe` / `ping`)
+- `snaky remove <name>` searches both namespaces (names must be globally unique)
+- `snaky disable <name>` / `snaky enable <name>` work on both namespaces
+- `snaky probe <name>` only runs entries from `endpoints` (error if name is a ping target)
+- `snaky ping` only runs entries from `pingTargets` (built-in + user-added ping targets)
+
+**Name uniqueness is global** — a name cannot exist in both `endpoints` and `pingTargets` (enforced at config load time).
 
 ### URL / Domain Normalization (for cftrace method)
 
 - Accept bare domain: `openai.com` → stored as `openai.com`
 - Accept full URL: `https://openai.com` or `https://openai.com/cdn-cgi/trace` → normalized to `openai.com`
 - Auto-reject non-HTTP(S) schemes (ftp://, file://, etc.) with error
+- **Reject domains/URLs with explicit port** (e.g., `example.com:8443`, `https://example.com:8443/`) — error: "Custom ports not supported. Probe always uses HTTPS (port 443)."
 - Strip trailing slashes and paths
-- Probe URL construction: `https://{stored_domain}/cdn-cgi/trace`
+- Probe URL construction: `https://{stored_domain}/cdn-cgi/trace` (always port 443)
 
 ### Validation for http-header / http-ping methods
 
@@ -469,8 +504,9 @@ This guarantees consumers always know which sections to expect without guessing.
 ```
 
 **`responseTimeMs` in failure entries:**
-- Always present when measurable (TIMEOUT, HTTP_ERROR, PARSE_ERROR, REDIRECT, HEADER_MISSING) — shows elapsed time at point of failure detection (header-arrival time)
-- Absent (`undefined`) only when no connection was established (DNS_FAILED, CONNECTION_REFUSED, TLS_ERROR)
+- Present (number) when measurable: TIMEOUT, HTTP_ERROR, PARSE_ERROR, REDIRECT, HEADER_MISSING — shows elapsed time at point of failure detection (header-arrival time)
+- `null` when no connection was established: DNS_FAILED, CONNECTION_REFUSED, TLS_ERROR — no meaningful time to report
+- **Always a field** in the JSON object (never omitted). Value is either `number` or `null`. This ensures Swift `Decodable` can use a non-optional type `Double?` without worrying about missing keys.
 
 **`target` vs `resolvedTarget`:**
 - `target`: the configured domain/URL (always present)
@@ -492,7 +528,7 @@ This guarantees consumers always know which sections to expect without guessing.
 }
 ```
 
-**Failure (all rounds timed out):**
+**Failure (all rounds failed):**
 ```json
 {
   "name": "ping-youtube",
@@ -500,11 +536,11 @@ This guarantees consumers always know which sections to expect without guessing.
   "ok": false,
   "medianMs": null,
   "rounds": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-  "error": { "code": "ALL_TIMEOUT", "message": "All 12 rounds timed out" }
+  "error": { "code": "ALL_FAILED", "message": "All 12 rounds failed (10 timeout, 2 DNS)" }
 }
 ```
 
-**Partial success (some rounds timed out):**
+**Partial success (some rounds failed):**
 ```json
 {
   "name": "ping-wechat",
@@ -515,7 +551,11 @@ This guarantees consumers always know which sections to expect without guessing.
 }
 ```
 
-(`-1` in rounds array = that round timed out. `ok: true` if at least 1 round succeeded. `medianMs` computed from successful rounds only.)
+**Rounds array semantics:**
+- Positive number = round succeeded, value is responseTimeMs for that round
+- `-1` = round failed (any network-level failure: timeout, DNS, TLS, connection refused)
+- `ok: true` if at least 1 round succeeded; `medianMs` computed from successful rounds only
+- The `-1` value intentionally collapses all failure types — per-round error detail is not exposed in v1 (the overall `error.message` summarizes failure breakdown when `ok: false`)
 
 ---
 
@@ -531,10 +571,10 @@ This guarantees consumers always know which sections to expect without guessing.
 | `PARSE_ERROR`        | cftrace, http-header        | Response body/header not valid format      |
 | `REDIRECT`           | cftrace, http-header        | Server responded with 3xx redirect         |
 | `HEADER_MISSING`     | http-header                 | Expected IP header not present in response |
-| `ALL_TIMEOUT`        | http-ping                   | All ping rounds timed out                  |
+| `ALL_FAILED`         | http-ping                   | All ping rounds failed (message includes breakdown) |
 | `UNKNOWN`            | all                         | Unexpected error                           |
 
-**Note:** `HTTP_ERROR` does NOT apply to `http-ping` — any HTTP response (including 403, 204, etc.) counts as successful connectivity for ping purposes. Only network-level failures (timeout, DNS, connection refused, TLS) cause ping round failure.
+**Note:** `HTTP_ERROR` and `REDIRECT` do NOT apply to `http-ping` — any HTTP response (including 403, 204, 3xx) counts as successful connectivity for ping purposes. Ping uses `redirect: "follow"`. Only network-level failures (timeout, DNS, connection refused, TLS) cause ping round failure.
 
 ---
 
@@ -550,6 +590,17 @@ This guarantees consumers always know which sections to expect without guessing.
 **JSON completeness guarantee:** When `--json` is active, exit codes 0, 1, and 2 ALL produce valid, complete JSON on stdout. The macOS app can safely parse stdout regardless of exit code (0–2). Only exit code 3 may produce no stdout (fatal error before probing starts — error message goes to stderr only).
 
 **Ping-only failures do not affect exit code** when running `snaky` (all mode). Exit code reflects probe (IP detection) results only. `snaky ping` standalone has its own exit code logic: 0 = all reachable, 1 = some unreachable, 2 = all unreachable.
+
+### Empty Selection Behavior
+
+| Scenario | Exit code | Output |
+| -------- | --------- | ------ |
+| `snaky probe unknown-name` (name not found) | 3 | stderr: "Endpoint 'unknown-name' not found" |
+| `snaky --category nonexistent` (filter yields empty) | 0 | Empty results array, summary total=0 |
+| All endpoints disabled (nothing to probe) | 0 | Empty results array, summary total=0 |
+| `snaky probe name1 name2` where name1 exists but name2 doesn't | 3 | stderr: "Endpoint 'name2' not found" |
+
+**Rationale:** Explicit name reference that doesn't exist = user error (exit 3). Category filter or disable that yields empty = valid configuration (exit 0 with empty output). macOS app handles empty results gracefully (shows "No endpoints configured" message).
 
 ---
 
@@ -818,9 +869,12 @@ Priority order (stop at first success):
 - Ping failures don't change exit code in all mode
 
 **Fallback domain (cftrace):**
-- Primary domain fails, fallback succeeds → `usedFallback: true`, `resolvedTarget` set
-- Both primary and fallback fail → reports failure with last error, `usedFallback: false`
-- `responseTimeMs` is from the successful/final request only
+- Primary succeeds → fallback not attempted, `usedFallback: false`
+- Primary fails, fallback succeeds → `usedFallback: true`, `resolvedTarget` set
+- Primary fails, fallback fails once → retries apply to fallback (up to N retries)
+- Primary fails, fallback exhausts all retries → reports failure with last error, `usedFallback: false`
+- `responseTimeMs` is from the final (successful or last-failed) request only
+- No retries on primary when fallback is configured (primary gets one shot)
 
 **macOS app (Xcode tests):**
 - Parse CLI JSON output (mode=all, success fixture)
@@ -842,7 +896,7 @@ Priority order (stop at first success):
 - Separate stdout (data) from stderr (diagnostics) strictly
 - Validate config file on load, fail fast with actionable message
 - In `--json` mode, always output valid JSON on exit codes 0–2
-- Use `{ redirect: "manual" }` in all fetch calls
+- Use `{ redirect: "manual" }` in IP probe fetch calls (`cftrace`, `http-header`)
 - Retry failed IP probes before reporting final failure
 - Preserve user endpoint config when disabling (don't replace with tombstone)
 
@@ -859,7 +913,7 @@ Priority order (stop at first success):
 - Require authentication or API keys
 - Bundle the CLI inside the macOS app (keep them independent)
 - Use Electron or web views for the macOS app
-- Follow HTTP redirects during probe (treat as misconfiguration)
+- Follow HTTP redirects during IP probe (treat as misconfiguration; ping follows redirects intentionally)
 - Print anything to stdout except the final structured output
 - Perform GeoIP lookups in the CLI (location comes from CF only; null otherwise)
 
