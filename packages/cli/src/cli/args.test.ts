@@ -166,6 +166,18 @@ describe("parseCliArgs", () => {
     if (!result.ok) expect(result.error).toMatch(/1.*20/);
   });
 
+  it("--timeout rejects trailing non-numeric chars", () => {
+    const result = parseCliArgs(["--timeout", "100abc"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--timeout/);
+  });
+
+  it("--concurrency rejects trailing non-numeric chars", () => {
+    const result = parseCliArgs(["--concurrency", "1abc"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/--concurrency/);
+  });
+
   it("--no-color flag", () => {
     const result = parseCliArgs(["--no-color"]);
     expect(result.ok).toBe(true);

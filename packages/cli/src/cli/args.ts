@@ -79,15 +79,15 @@ export function parseCliArgs(argv: string[]): ParseResult {
   };
 
   if (parsed.values.timeout) {
-    const v = parseInt(parsed.values.timeout as string, 10);
-    if (Number.isNaN(v) || v < 100 || v > 60000) {
+    const v = Number(parsed.values.timeout as string);
+    if (!Number.isInteger(v) || v < 100 || v > 60000) {
       return { ok: false, error: "--timeout must be an integer between 100 and 60000" };
     }
     flags.timeout = v;
   }
   if (parsed.values.concurrency) {
-    const v = parseInt(parsed.values.concurrency as string, 10);
-    if (Number.isNaN(v) || v < 1 || v > 20) {
+    const v = Number(parsed.values.concurrency as string);
+    if (!Number.isInteger(v) || v < 1 || v > 20) {
       return { ok: false, error: "--concurrency must be an integer between 1 and 20" };
     }
     flags.concurrency = v;
