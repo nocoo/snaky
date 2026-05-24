@@ -4,7 +4,7 @@ import type { ProbeResult } from "../probes/types.js";
 import { runProbes } from "./probe-runner.js";
 
 function makeCfEndpoint(name: string): Endpoint {
-  return { name, method: "cftrace", domain: `${name}.com`, category: "test" };
+  return { name, method: "cftrace", domain: `${name}.com`, category: "test", tier: 1 };
 }
 
 describe("runProbes", () => {

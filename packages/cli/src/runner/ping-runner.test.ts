@@ -3,7 +3,7 @@ import type { PingTarget } from "../config/types.js";
 import { runPing } from "./ping-runner.js";
 
 function makeTarget(name: string): PingTarget {
-  return { name, url: `https://${name}.com/health`, tag: "test" };
+  return { name, url: `https://${name}.com/health`, tag: "test", tier: 1 };
 }
 
 describe("runPing", () => {

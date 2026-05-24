@@ -329,4 +329,27 @@ describe("validateConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[0]).toMatch(/pingTargets must be an array/);
   });
+
+  it("accepts valid tier value", () => {
+    const result = validateConfig({ tier: 2 });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects tier below minimum", () => {
+    const result = validateConfig({ tier: 0 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/tier/);
+  });
+
+  it("rejects tier above maximum", () => {
+    const result = validateConfig({ tier: 10 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/tier/);
+  });
+
+  it("rejects non-integer tier", () => {
+    const result = validateConfig({ tier: 1.5 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/tier/);
+  });
 });

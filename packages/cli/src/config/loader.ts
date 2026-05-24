@@ -54,6 +54,7 @@ export function loadConfig(path?: string): LoadResult {
     concurrency: (raw.concurrency as number) ?? DEFAULTS.concurrency,
     retries: (raw.retries as number) ?? DEFAULTS.retries,
     pingRounds: (raw.pingRounds as number) ?? DEFAULTS.pingRounds,
+    tier: (raw.tier as number) ?? DEFAULTS.tier,
   };
 
   const userEndpoints = raw.endpoints ?? [];
@@ -73,6 +74,7 @@ export function loadConfig(path?: string): LoadResult {
         method: "cftrace",
         domain: (ue as { domain?: string }).domain!,
         category: "user",
+        tier: ue.tier ?? 1,
       });
     } else if (ue.method === "http-header") {
       const hep = ue as { url?: string; headers?: string[] };
@@ -82,6 +84,7 @@ export function loadConfig(path?: string): LoadResult {
         url: hep.url!,
         headers: hep.headers!,
         category: "user",
+        tier: ue.tier ?? 1,
       });
     }
   }
@@ -108,6 +111,7 @@ export function loadConfig(path?: string): LoadResult {
       name: upt.name,
       url: upt.url!,
       tag: upt.tag ?? "user",
+      tier: upt.tier ?? 1,
     });
   }
 

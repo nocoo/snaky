@@ -4,6 +4,7 @@ export type CftraceEndpoint = {
   domain: string;
   fallbackDomain?: string;
   category: string;
+  tier: number;
   disabled?: boolean;
 };
 
@@ -13,6 +14,7 @@ export type HttpHeaderEndpoint = {
   url: string;
   headers: string[];
   category: string;
+  tier: number;
   disabled?: boolean;
 };
 
@@ -22,6 +24,7 @@ export type PingTarget = {
   name: string;
   url: string;
   tag: string;
+  tier: number;
   disabled?: boolean;
 };
 
@@ -31,6 +34,7 @@ export type Settings = {
   concurrency: number;
   retries: number;
   pingRounds: number;
+  tier: number;
 };
 
 export type UserCftraceEndpoint = {
@@ -38,6 +42,7 @@ export type UserCftraceEndpoint = {
   method?: "cftrace";
   domain?: string;
   fallbackDomain?: string;
+  tier?: number;
   disabled?: boolean;
 };
 
@@ -46,6 +51,7 @@ export type UserHttpHeaderEndpoint = {
   method: "http-header";
   url?: string;
   headers?: string[];
+  tier?: number;
   disabled?: boolean;
 };
 
@@ -53,6 +59,7 @@ export type UserHttpPingTarget = {
   name: string;
   url?: string;
   tag?: string;
+  tier?: number;
   disabled?: boolean;
 };
 
@@ -66,6 +73,7 @@ export type RawConfig = {
   concurrency?: number;
   retries?: number;
   pingRounds?: number;
+  tier?: number;
   [key: string]: unknown;
 };
 
@@ -81,4 +89,5 @@ export const DEFAULT_SETTINGS: Settings = {
   concurrency: 10,
   retries: 2,
   pingRounds: 12,
+  tier: 1,
 };

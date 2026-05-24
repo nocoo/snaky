@@ -18,6 +18,7 @@ const KNOWN_KEYS = new Set([
   "concurrency",
   "retries",
   "pingRounds",
+  "tier",
 ]);
 
 export type ValidationSuccess = {
@@ -56,6 +57,9 @@ export function validateConfig(raw: Record<string, unknown>): ValidationResult {
   }
   if ("pingRounds" in raw) {
     validateInt(raw.pingRounds, "pingRounds", 1, 30, errors);
+  }
+  if ("tier" in raw) {
+    validateInt(raw.tier, "tier", 1, 9, errors);
   }
 
   const allNames = new Set<string>();
