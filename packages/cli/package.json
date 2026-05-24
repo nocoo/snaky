@@ -1,0 +1,33 @@
+{
+  "name": "@nocoo/snaky",
+  "version": "0.1.0",
+  "description": "IP routing probe & latency tester",
+  "type": "module",
+  "bin": {
+    "snaky": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": ["ip", "probe", "latency", "routing", "vpn", "split-tunnel"],
+  "author": "nocoo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @nocoo/snaky build",
+    "dev": "pnpm --filter @nocoo/snaky dev",
+    "test": "pnpm --filter @nocoo/snaky test",
+    "test:coverage": "pnpm --filter @nocoo/snaky test:coverage"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
