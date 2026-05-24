@@ -17,39 +17,37 @@ export function formatProbeTable(
 
   const lines: string[] = [];
   lines.push(bold("Split Tunnel Probe", opts));
-  lines.push("━".repeat(70));
+  lines.push("━".repeat(72));
   lines.push(
-    padRow(["Endpoint", "Category", "IP", "Location", "Colo", "Latency"]),
+    padRow(["Endpoint", "Location", "Colo", "Latency", "IP"]),
   );
-  lines.push("─".repeat(70));
+  lines.push("─".repeat(72));
 
   for (const entry of entries) {
     if (entry.ok) {
       lines.push(
         padRow([
-          entry.name,
-          entry.category,
-          entry.ip,
+          `${colorize("✓", "green", opts)} ${entry.name}`,
           entry.location ?? "—",
           entry.colo ?? "—",
-          `${entry.responseTimeMs}ms`,
+          colorizeLatency(entry.responseTimeMs, opts),
+          entry.ip,
         ]),
       );
     } else {
       lines.push(
         padRow([
-          entry.name,
-          entry.category,
-          "—",
+          `${colorize("✗", "red", opts)} ${entry.name}`,
           "—",
           "—",
           colorize(entry.error.code, "red", opts),
+          "—",
         ]),
       );
     }
   }
 
-  lines.push("─".repeat(70));
+  lines.push("─".repeat(72));
 
   const succeeded = entries.filter((e) => e.ok).length;
   const total = entries.length;
@@ -75,16 +73,26 @@ export function formatPingTable(
   const roundCount = results[0]?.rounds.length ?? 0;
   const lines: string[] = [];
   lines.push(bold(`Connectivity Test (median of ${roundCount} rounds)`, opts));
-  lines.push("━".repeat(45));
+  lines.push("━".repeat(50));
   lines.push(padRow3(["Target", "Tag", "Latency"]));
-  lines.push("─".repeat(45));
+  lines.push("─".repeat(50));
 
   for (const r of results) {
     if (r.ok) {
-      lines.push(padRow3([r.name, r.tag, `${r.medianMs}ms`]));
+      lines.push(
+        padRow3([
+          `${colorize("✓", "green", opts)} ${r.name}`,
+          r.tag,
+          colorizeLatency(r.medianMs ?? 0, opts),
+        ]),
+      );
     } else {
       lines.push(
-        padRow3([r.name, r.tag, colorize("FAILED", "red", opts)]),
+        padRow3([
+          `${colorize("✗", "red", opts)} ${r.name}`,
+          r.tag,
+          colorize("FAILED", "red", opts),
+        ]),
       );
     }
   }
@@ -93,13 +101,17 @@ export function formatPingTable(
 }
 
 function padRow(cols: string[]): string {
-  const widths = [16, 10, 16, 9, 5, 10];
-  return cols.map((c, i) => c.padEnd(widths[i]!)).join(" ");
+  const widths = [20, 10, 6, 12, 0];
+  return cols
+    .map((c, i) => (i < cols.length - 1 ? c.padEnd(widths[i] ?? 0) : c))
+    .join(" ");
 }
 
 function padRow3(cols: string[]): string {
-  const widths = [17, 15, 10];
-  return cols.map((c, i) => c.padEnd(widths[i]!)).join(" ");
+  const widths = [22, 15, 10];
+  return cols
+    .map((c, i) => (i < cols.length - 1 ? c.padEnd(widths[i] ?? 0) : c))
+    .join(" ");
 }
 
 function bold(text: string, opts: TableOpts): string {
@@ -107,8 +119,16 @@ function bold(text: string, opts: TableOpts): string {
   return `\x1b[1m${text}\x1b[0m`;
 }
 
-function colorize(text: string, color: "red" | "green", opts: TableOpts): string {
+function colorize(text: string, color: "red" | "green" | "yellow", opts: TableOpts): string {
   if (opts.noColor) return text;
-  const code = color === "red" ? "31" : "32";
-  return `\x1b[${code}m${text}\x1b[0m`;
+  const codes = { red: "31", green: "32", yellow: "33" };
+  return `\x1b[${codes[color]}m${text}\x1b[0m`;
+}
+
+function colorizeLatency(ms: number, opts: TableOpts): string {
+  const text = `${ms}ms`;
+  if (opts.noColor) return text;
+  if (ms <= 200) return colorize(text, "green", opts);
+  if (ms <= 1000) return colorize(text, "yellow", opts);
+  return colorize(text, "red", opts);
 }
