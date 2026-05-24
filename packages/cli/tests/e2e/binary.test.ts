@@ -114,10 +114,10 @@ describe("CLI with mock server", () => {
       configPath,
       JSON.stringify({
         endpoints: [
-          { name: "test-cf", method: "cftrace", domain: `127.0.0.1` },
+          { name: "test-cf", method: "cftrace", domain: "example.com" },
         ],
         pingTargets: [
-          { name: "test-ping", url: `https://127.0.0.1:${port}/health`, tag: "test" },
+          { name: "test-ping", url: "https://example.com/health", tag: "test" },
         ],
         timeout: 5000,
         pingRounds: 3,
@@ -131,27 +131,35 @@ describe("CLI with mock server", () => {
   });
 
   it("probe --json produces valid JSON", async () => {
-    // Use a simple config with only our test endpoint
     const testConfig = join(dir, "probe-config.json");
     writeFileSync(
       testConfig,
       JSON.stringify({
         endpoints: [
-          { name: "test-cf", method: "cftrace", domain: `127.0.0.1:${port}` },
+          {
+            name: "test-header",
+            method: "http-header",
+            url: "https://127.0.0.1:19999/check",
+            headers: ["x-real-ip"],
+          },
         ],
-        timeout: 5000,
+        timeout: 2000,
+        retries: 0,
       }),
     );
 
-    // The domain has a port which is not valid for cftrace normalization in real use,
-    // but the probe constructs URL as https://{domain}/cdn-cgi/trace
-    // So for test we need to use a different approach - test with config show
     const { stdout, exitCode } = await run([
-      "config", "show",
+      "probe", "test-header", "--json",
       "--config", testConfig,
     ]);
-    expect(exitCode).toBe(0);
+    // Connection refused → all fail → exit 2, but JSON must be valid
+    expect(exitCode).toBe(2);
     expect(() => JSON.parse(stdout)).not.toThrow();
+    const parsed = JSON.parse(stdout);
+    expect(parsed.mode).toBe("probe");
+    expect(parsed.probe.results).toHaveLength(1);
+    expect(parsed.probe.results[0].ok).toBe(false);
+    expect(parsed.probe.results[0].error.code).toBeDefined();
   });
 
   it("config show with custom config path", async () => {
