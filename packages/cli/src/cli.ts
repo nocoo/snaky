@@ -20,7 +20,8 @@ import { runPing } from "./runner/ping-runner.js";
 import { runProbes } from "./runner/probe-runner.js";
 import { buildUniqueSummary } from "./runner/summary.js";
 
-const VERSION = "0.1.0";
+declare const __VERSION__: string;
+
 const DEFAULT_CONFIG_PATH = join(homedir(), ".config", "snaky", "config.json");
 
 export async function main(argv: string[]): Promise<number> {
@@ -34,7 +35,7 @@ export async function main(argv: string[]): Promise<number> {
   const configPath = flags.config ?? DEFAULT_CONFIG_PATH;
 
   if (command.type === "version") {
-    process.stdout.write(`${VERSION}\n`);
+    process.stdout.write(`${__VERSION__}\n`);
     return 0;
   }
 
