@@ -50,12 +50,17 @@ snaky                       # Run all: split-tunnel probe + connectivity test
 snaky probe [name...]       # Probe specific named endpoints only (IP detection)
 snaky ping                  # Connectivity test only (latency to key services)
 snaky list                  # List all endpoints (source: built-in / user / disabled)
-snaky add <name> <target>   # Add user endpoint. See "Endpoint Definition" below.
+snaky add <name> <domain>   # Add cftrace endpoint (shorthand, most common)
+snaky add <name> --method http-header --url <url> --header <header-name>
+                            # Add http-header endpoint
+snaky add <name> --method http-ping --url <url>
+                            # Add http-ping endpoint
 snaky remove <name>         # Remove a user-added endpoint or user override
-snaky disable <name>        # Suppress a built-in endpoint (stores tombstone in config)
-snaky enable <name>         # Re-enable a previously disabled built-in endpoint
-snaky config path           # Print config file path
-snaky config show           # Print current effective config (merged defaults + user)
+snaky disable <name>        # Suppress an endpoint (see "disable semantics" below)
+snaky enable <name>         # Re-enable a previously disabled endpoint
+snaky config path           # Print config file path (read-only, never creates file)
+snaky config show           # Print effective config (read-only, never creates file)
+snaky config init           # Create config file with default settings (if not exists)
 ```
 
 **`snaky` (no subcommand)** runs both probe and ping in parallel, displays results in two sections.
@@ -93,10 +98,10 @@ The primary method. Works on any domain fronted by Cloudflare.
 **Response:** Plain text, key=value per line  
 **Extracts:**
 - `ip=` → exit IP address
-- `loc=` → country code (lowercase ISO 3166-1 alpha-2)
-- `colo=` → Cloudflare datacenter code (IATA)
+- `loc=` → country code (uppercase ISO 3166-1 alpha-2, as returned by Cloudflare)
+- `colo=` → Cloudflare datacenter code (IATA, uppercase)
 
-**Fallback domain:** Some endpoints define a `fallbackDomain`. If the primary domain fails, retry with the fallback before reporting error.
+**Fallback domain:** Some endpoints define a `fallbackDomain`. If the primary domain fails (any error), retry with the fallback before reporting error.
 
 ### Method 2: `http-header` (Response Header Inspection)
 
@@ -108,18 +113,23 @@ For CDN providers that expose the client IP in a response header (not Cloudflare
 - `url`: full URL to request
 - `headers`: ordered list of header names to check (first non-empty wins)
 
+**Header value parsing (strict):**
+- The header value MUST be a single valid IPv4 or IPv6 literal (e.g., `1.2.3.4` or `2001:db8::1`)
+- Values containing commas (e.g., `1.2.3.4, 5.6.7.8`), ports (`1.2.3.4:8080`), JSON, or other formats → `PARSE_ERROR`
+- Leading/trailing whitespace is trimmed before validation
+
 **Examples:**
 - Netease CDN: `HEAD https://necaptcha.nosdn.127.net/...` → header `cdn-user-ip`
 - Bytedance CDN: `HEAD https://perfops.byte-test.com/...` → headers `x-request-ip`, `x-response-cinfo`
 
-**Extracts:** IP address only (no country code or datacenter from this method — requires geo lookup).
+**Extracts:** IP address only. `location` and `colo` are always `null` for this method — the CLI does NOT perform GeoIP lookups.
 
 ### Method 3: `http-ping` (Connectivity & Latency Only)
 
 For connectivity tests where we only care about reachability and latency, not the exit IP.
 
-**Request:** `GET {url}` or `HEAD {url}` (configurable per endpoint)  
-**Success criteria:** Any HTTP response received (including non-2xx status codes like 204, 403)  
+**Request:** `GET {url}` with `{ redirect: "manual" }`  
+**Success criteria:** Any HTTP response received — including non-2xx status codes (204, 403, etc.). The `HTTP_ERROR` code does NOT apply to this method.  
 **Extracts:** `responseTimeMs` only — no IP, no geo.
 
 **Used for:** `snaky ping` targets (GitHub generate_204, YouTube generate_204, Taobao favicon, etc.)
@@ -133,13 +143,46 @@ For all methods:
 2. Execute HTTP request per method spec, with `{ redirect: "manual" }`
 3. Record `responseTimeMs`: wall-clock duration from `fetch()` call to response headers received (includes DNS + TCP + TLS + server processing; excludes body read time)
 4. For `cftrace`: read body and parse key=value pairs
-5. For `http-header`: read specified response header(s)
+5. For `http-header`: read specified response header(s), validate as IP literal
 6. For `http-ping`: response received = success (no body/header parsing)
 7. Return structured result
 
+**`responseTimeMs` is always the header-arrival timestamp** — even when `PARSE_ERROR` occurs after reading the body. This gives a consistent measurement point across all methods and error types. It represents network latency, not total processing time.
+
 **Why `responseTimeMs` not "TTFB":** TTFB has ambiguous definitions across tools (some exclude DNS, some include body). We define it precisely as above and name it unambiguously.
 
-**Retry policy:** Failed probes are retried up to 2 times with exponential backoff (2s, 4s delay). Retries are per-endpoint and do not block other endpoints.
+### Retry Policy
+
+**Applies to: IP detection probes (`cftrace`, `http-header`) ONLY.**
+
+- Failed probes are retried up to `retries` times (default: 2) with exponential backoff (2s, 4s delay)
+- Retries are per-endpoint and do not block other endpoints
+- The retry count is "in-flight slots" — a retrying endpoint does NOT release its concurrency slot during backoff wait (it holds the slot until final success/failure)
+
+**Does NOT apply to:** `http-ping` rounds. Each ping round is independent — a timed-out round is recorded as `-1` and the next round proceeds immediately. No retry.
+
+### Timing Bounds
+
+**Worst-case single endpoint duration (IP probe):**
+```
+timeout × (retries + 1) + backoff_sum
+= 5000 × 3 + (2000 + 4000) = 21000ms (21s)
+```
+
+**Worst-case total CLI execution time:**
+```
+(total_endpoints / concurrency) × worst_case_single + ping_warmup + (pingRounds × pingTimeout)
+```
+
+With defaults (28 endpoints, concurrency=10, 2 retries, 12 ping rounds):
+- Probes: ceil(28/10) × 21s = 63s worst case (all timeout + all retry)
+- Ping: 3s warmup + 12 × 3s = 39s
+- Total: ~63s (probes and ping run in parallel; probes dominate)
+- **Typical (no retries):** ~5–8s
+
+### Concurrency Model
+
+The `concurrency` setting limits **active HTTP requests** (in-flight fetch calls). Endpoints waiting in backoff between retries count as "occupied" — they hold their slot.
 
 ---
 
@@ -228,25 +271,41 @@ These use the `http-ping` method — latency measurement only, no IP extraction.
 **Connectivity test behavior:**
 - Runs 1 warmup round (hidden, establishes TCP+TLS) + 12 measured rounds per target
 - Reports **median** latency (not average — resistant to outliers)
-- All targets probed concurrently within each round
-- Per-probe timeout: 3000ms (shorter than IP probe timeout)
+- All targets probed concurrently within each round; rounds are sequential
+- Per-round timeout: 3000ms (shorter than IP probe timeout)
+- Individual round timeout does NOT trigger retry — recorded as -1 and next round starts
 - Results include per-round history for sparkline/dot visualization in macOS app
+
+### Built-in Endpoint Maintenance
+
+Built-in endpoints reference third-party services that may change or go offline. Rules for maintenance:
+
+- **Each built-in endpoint MUST have a mock fixture** in the test suite that simulates its expected response. Tests never hit real network.
+- **Live validation** (optional, non-blocking): a separate `test:live` script can be run manually or in a scheduled CI job (not on every PR) to verify endpoints are still responding. Failures are logged as warnings, not CI-blocking errors.
+- **Deprecation process:** If a built-in endpoint is confirmed dead (>30 days of `test:live` failure or domain sold/decommissioned):
+  1. Move it to a `deprecated` category (excluded from default probe, still available by name)
+  2. After one release cycle: remove from source entirely
+  3. Document removal in CHANGELOG
+- **Adding new built-in endpoints** requires: mock fixture + confirmation that the domain actually has the expected probe method (cftrace response, or header present).
 
 ---
 
 ## Endpoint Definition (for user-added endpoints)
 
-User-added endpoints (`snaky add`) support all 3 methods. The `<target>` argument determines the method:
+User-added endpoints (`snaky add`) support all 3 methods:
 
 ```
-snaky add <name> <domain>                    # Inferred as cftrace (domain only)
-snaky add <name> --method http-header \
-  --url <url> --header <header-name>         # Explicit http-header method
-snaky add <name> --method http-ping \
-  --url <url>                                # Explicit http-ping method
+snaky add <name> <domain>
+    # Adds a cftrace endpoint. <domain> is normalized (see below).
+
+snaky add <name> --method http-header --url <url> --header <header-name>
+    # Adds an http-header endpoint. --header can be repeated for multiple headers.
+
+snaky add <name> --method http-ping --url <url>
+    # Adds an http-ping endpoint (connectivity test target).
 ```
 
-**Shorthand (most common case):** `snaky add mysite example.com` → cftrace on `example.com`
+**No mixed-argument form.** The positional `<domain>` argument is only valid for cftrace (the shorthand). For other methods, `--method` is required and `<domain>` positional is forbidden (error if both present).
 
 ### URL / Domain Normalization (for cftrace method)
 
@@ -258,17 +317,18 @@ snaky add <name> --method http-ping \
 
 ### Validation for http-header / http-ping methods
 
-- `url`: must be a valid HTTPS URL (HTTP rejected with warning — insecure)
-- `header`: required for `http-header`, must be a valid HTTP header name
+- `url`: must be a valid HTTPS URL (HTTP rejected with error)
+- `--header` (http-header only): required at least once, must be a valid HTTP header name (RFC 7230)
+- Multiple `--header` flags: stored as ordered array, checked in order at probe time
 
 ---
 
 ## Default Endpoints Strategy
 
-**Built-in defaults** are hardcoded in source (not in config file). They are always present unless explicitly hidden.
+**Built-in defaults** are hardcoded in source (not in config file). They are always present unless explicitly disabled.
 
 **Merge rules:**
-- Effective endpoint list = built-in defaults + user-added endpoints − disabled endpoints
+- Effective endpoint list = built-in defaults + user-added endpoints − disabled entries
 - **Name collision:** If a user adds an endpoint with the same name as a built-in, the user entry takes precedence (overrides the built-in)
 - **`snaky list`** shows source column: `built-in` | `user` | `disabled`
 
@@ -279,18 +339,223 @@ snaky add <name> --method http-ping \
 - Target does not exist → error: "Endpoint '<name>' not found"
 
 **`snaky disable <name>` / `snaky enable <name>`:**
-- `disable` stores `{ "name": "<name>", "disabled": true }` in config — suppresses any built-in or user entry with that name
-- `enable` removes the disabled tombstone — if a built-in or user entry exists with that name, it becomes active again
-- `disable` on an already-disabled endpoint → no-op (idempotent)
-- `enable` on a non-disabled endpoint → no-op (idempotent)
+
+Disable/enable works on BOTH built-in and user-added endpoints:
+- **Disabling a built-in:** Adds `{ "name": "<name>", "disabled": true }` to config — suppresses the built-in
+- **Disabling a user endpoint:** Sets `"disabled": true` on the existing user config entry. The full endpoint configuration is preserved (not replaced by a tombstone), so `enable` restores it intact.
+- **Enabling:** Sets `"disabled": false` (or removes the `disabled` key) on the config entry. If the entry was a pure tombstone for a built-in, it is removed from config entirely.
+- Idempotent: `disable` on already-disabled → no-op; `enable` on already-enabled → no-op
 
 ---
 
 ## Output Formats
 
-### Probe Results (IP Detection)
+### JSON (`--json` flag)
 
-**Table (default, human-readable):**
+**Top-level structure — always present regardless of run mode:**
+```json
+{
+  "mode": "all",
+  "probe": { ... },
+  "ping": { ... }
+}
+```
+
+**`mode` field values:**
+| Value     | When                          | `probe`  | `ping`   |
+| --------- | ----------------------------- | -------- | -------- |
+| `"all"`   | `snaky` (no subcommand)       | present  | present  |
+| `"probe"` | `snaky probe [name...]`       | present  | `null`   |
+| `"ping"`  | `snaky ping`                  | `null`   | present  |
+
+This guarantees consumers always know which sections to expect without guessing.
+
+**Probe section:**
+```json
+{
+  "results": [ ...probe entries... ],
+  "summary": {
+    "total": 28,
+    "succeeded": 25,
+    "failed": 3
+  },
+  "uniqueIps": [
+    { "ip": "203.0.113.42", "location": "HK", "count": 20 },
+    { "ip": "198.51.100.7", "location": "US", "count": 3 },
+    { "ip": "10.0.0.1", "location": null, "count": 2 }
+  ]
+}
+```
+
+**Ping section:**
+```json
+{
+  "results": [ ...ping entries... ]
+}
+```
+
+---
+
+### Probe Entry Schema
+
+**Country code convention:** Uppercase ISO 3166-1 alpha-2 (e.g., `"HK"`, `"US"`, `"CN"`). This matches Cloudflare's `loc` field output directly — no transformation needed.
+
+**Success entry (cftrace):**
+```json
+{
+  "name": "openai",
+  "category": "ai",
+  "method": "cftrace",
+  "target": "openai.com",
+  "ok": true,
+  "ip": "203.0.113.42",
+  "location": "HK",
+  "colo": "HKG",
+  "responseTimeMs": 45,
+  "usedFallback": false
+}
+```
+
+**Success entry (cftrace with fallback used):**
+```json
+{
+  "name": "discord",
+  "category": "social",
+  "method": "cftrace",
+  "target": "discord.com",
+  "resolvedTarget": "gateway.discord.gg",
+  "ok": true,
+  "ip": "198.51.100.7",
+  "location": "US",
+  "colo": "LAX",
+  "responseTimeMs": 180,
+  "usedFallback": true
+}
+```
+
+**Success entry (http-header — no location, no colo):**
+```json
+{
+  "name": "netease",
+  "category": "domestic",
+  "method": "http-header",
+  "target": "https://necaptcha.nosdn.127.net/ab7f4275c1744aa28e0a8f3a1c58c532.png",
+  "ok": true,
+  "ip": "10.0.0.1",
+  "location": null,
+  "colo": null,
+  "responseTimeMs": 12,
+  "usedFallback": false
+}
+```
+
+**`location` is `null`** for `http-header` method — the CLI does NOT perform GeoIP lookups. Only `cftrace` provides location data (from CF's `loc` field). The macOS app or web frontend may enrich with GeoIP separately.
+
+**Failure entry:**
+```json
+{
+  "name": "example",
+  "category": "user",
+  "method": "cftrace",
+  "target": "example.com",
+  "ok": false,
+  "responseTimeMs": 5003,
+  "error": {
+    "code": "TIMEOUT",
+    "message": "Request timed out after 5000ms"
+  },
+  "usedFallback": false
+}
+```
+
+**`responseTimeMs` in failure entries:**
+- Always present when measurable (TIMEOUT, HTTP_ERROR, PARSE_ERROR, REDIRECT, HEADER_MISSING) — shows elapsed time at point of failure detection (header-arrival time)
+- Absent (`undefined`) only when no connection was established (DNS_FAILED, CONNECTION_REFUSED, TLS_ERROR)
+
+**`target` vs `resolvedTarget`:**
+- `target`: the configured domain/URL (always present)
+- `resolvedTarget`: only present when `usedFallback: true` — shows the fallback domain that was actually used
+- `responseTimeMs`: always refers to the **successful or final** request only (not cumulative across primary + fallback attempts)
+
+---
+
+### Ping Entry Schema
+
+**Success:**
+```json
+{
+  "name": "ping-github",
+  "tag": "international",
+  "ok": true,
+  "medianMs": 85,
+  "rounds": [92, 88, 85, 84, 86, 85, 83, 87, 85, 84, 86, 85]
+}
+```
+
+**Failure (all rounds timed out):**
+```json
+{
+  "name": "ping-youtube",
+  "tag": "international",
+  "ok": false,
+  "medianMs": null,
+  "rounds": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+  "error": { "code": "ALL_TIMEOUT", "message": "All 12 rounds timed out" }
+}
+```
+
+**Partial success (some rounds timed out):**
+```json
+{
+  "name": "ping-wechat",
+  "tag": "domestic",
+  "ok": true,
+  "medianMs": 15,
+  "rounds": [18, -1, 15, 14, 16, -1, 15, 14, 15, 16, 14, 15]
+}
+```
+
+(`-1` in rounds array = that round timed out. `ok: true` if at least 1 round succeeded. `medianMs` computed from successful rounds only.)
+
+---
+
+### Error Codes
+
+| Code                 | Applies to                  | Meaning                                    |
+| -------------------- | --------------------------- | ------------------------------------------ |
+| `TIMEOUT`            | cftrace, http-header        | No response within configured timeout      |
+| `DNS_FAILED`         | cftrace, http-header        | Domain resolution failed                   |
+| `CONNECTION_REFUSED` | cftrace, http-header        | TCP connection refused                     |
+| `TLS_ERROR`          | cftrace, http-header        | TLS handshake failure                      |
+| `HTTP_ERROR`         | cftrace, http-header        | Non-2xx status (includes status in message)|
+| `PARSE_ERROR`        | cftrace, http-header        | Response body/header not valid format      |
+| `REDIRECT`           | cftrace, http-header        | Server responded with 3xx redirect         |
+| `HEADER_MISSING`     | http-header                 | Expected IP header not present in response |
+| `ALL_TIMEOUT`        | http-ping                   | All ping rounds timed out                  |
+| `UNKNOWN`            | all                         | Unexpected error                           |
+
+**Note:** `HTTP_ERROR` does NOT apply to `http-ping` — any HTTP response (including 403, 204, etc.) counts as successful connectivity for ping purposes. Only network-level failures (timeout, DNS, connection refused, TLS) cause ping round failure.
+
+---
+
+### Exit Codes
+
+| Code | Meaning                        |
+| ---- | ------------------------------ |
+| 0    | All probes succeeded           |
+| 1    | Some probes failed (partial)   |
+| 2    | All probes failed              |
+| 3    | Fatal error (bad config, etc.) |
+
+**JSON completeness guarantee:** When `--json` is active, exit codes 0, 1, and 2 ALL produce valid, complete JSON on stdout. The macOS app can safely parse stdout regardless of exit code (0–2). Only exit code 3 may produce no stdout (fatal error before probing starts — error message goes to stderr only).
+
+**Ping-only failures do not affect exit code** when running `snaky` (all mode). Exit code reflects probe (IP detection) results only. `snaky ping` standalone has its own exit code logic: 0 = all reachable, 1 = some unreachable, 2 = all unreachable.
+
+---
+
+### Table Output (human-readable)
+
+**Probe results:**
 ```
 Split Tunnel Probe
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -299,16 +564,14 @@ Endpoint         Category   IP              Location  Colo  Latency
 anthropic        ai         203.0.113.42    HK        HKG   45ms
 chatgpt          ai         203.0.113.42    HK        HKG   52ms
 discord          social     198.51.100.7    US        LAX   180ms
-netease          domestic   10.0.0.1        CN        —     12ms
-bytedance        domestic   10.0.0.2        CN        —     8ms
+netease          domestic   10.0.0.1        —         —     12ms
+bytedance        domestic   10.0.0.2        —         —     8ms
 example.com      user       —               —         —     TIMEOUT
 ────────────────────────────────────────────────────────────────────────
-Summary: 5/6 succeeded | Unique IPs: 203.0.113.42 (HK), 198.51.100.7 (US), 10.0.0.1 (CN)
+Summary: 5/6 succeeded | Unique IPs: 203.0.113.42 (HK), 198.51.100.7 (US), 10.0.0.1
 ```
 
-### Connectivity Results (Ping)
-
-**Table:**
+**Connectivity results:**
 ```
 Connectivity Test (median of 12 rounds)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -322,131 +585,6 @@ Cloudflare       international  42ms
 YouTube          international  92ms
 ```
 
-### JSON (`--json` flag)
-
-**Top-level structure:**
-```json
-{
-  "probe": {
-    "results": [ ...probe entries... ],
-    "summary": {
-      "total": 28,
-      "succeeded": 25,
-      "failed": 3
-    },
-    "uniqueIps": [
-      { "ip": "203.0.113.42", "location": "HK", "count": 20 },
-      { "ip": "198.51.100.7", "location": "US", "count": 3 },
-      { "ip": "10.0.0.1", "location": "CN", "count": 2 }
-    ]
-  },
-  "ping": {
-    "results": [ ...ping entries... ]
-  }
-}
-```
-
-**Probe success entry:**
-```json
-{
-  "name": "openai",
-  "category": "ai",
-  "method": "cftrace",
-  "ok": true,
-  "ip": "203.0.113.42",
-  "location": "HK",
-  "colo": "HKG",
-  "responseTimeMs": 45
-}
-```
-
-**Probe success entry (http-header method — no colo):**
-```json
-{
-  "name": "netease",
-  "category": "domestic",
-  "method": "http-header",
-  "ok": true,
-  "ip": "10.0.0.1",
-  "location": "CN",
-  "colo": null,
-  "responseTimeMs": 12
-}
-```
-
-**Probe failure entry:**
-```json
-{
-  "name": "example",
-  "category": "user",
-  "method": "cftrace",
-  "ok": false,
-  "responseTimeMs": 5003,
-  "error": {
-    "code": "TIMEOUT",
-    "message": "Request timed out after 5000ms"
-  }
-}
-```
-
-**`responseTimeMs` in failure entries:**
-- Always present when measurable (TIMEOUT, HTTP_ERROR, PARSE_ERROR, REDIRECT) — shows elapsed time before failure
-- Absent (`undefined`) only when no connection was established (DNS_FAILED, CONNECTION_REFUSED, TLS_ERROR)
-
-**Ping entry:**
-```json
-{
-  "name": "ping-github",
-  "tag": "international",
-  "ok": true,
-  "medianMs": 85,
-  "rounds": [92, 88, 85, 84, 86, 85, 83, 87, 85, 84, 86, 85]
-}
-```
-
-**Ping failure entry:**
-```json
-{
-  "name": "ping-youtube",
-  "tag": "international",
-  "ok": false,
-  "medianMs": null,
-  "rounds": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-  "error": { "code": "TIMEOUT", "message": "All 12 rounds timed out" }
-}
-```
-
-(`-1` in rounds array = that round timed out)
-
-**Error codes (exhaustive for v1):**
-
-| Code                 | Meaning                                    |
-| -------------------- | ------------------------------------------ |
-| `TIMEOUT`            | No response within configured timeout      |
-| `DNS_FAILED`         | Domain resolution failed                   |
-| `CONNECTION_REFUSED` | TCP connection refused                     |
-| `TLS_ERROR`          | TLS handshake failure                      |
-| `HTTP_ERROR`         | Non-2xx status (includes status in message)|
-| `PARSE_ERROR`        | Response body not valid trace format       |
-| `REDIRECT`           | Server responded with 3xx redirect         |
-| `HEADER_MISSING`     | Expected IP header not present in response |
-| `UNKNOWN`            | Unexpected error                           |
-
-### Exit Codes
-
-| Code | Meaning                        |
-| ---- | ------------------------------ |
-| 0    | All probes succeeded           |
-| 1    | Some probes failed (partial)   |
-| 2    | All probes failed              |
-| 3    | Fatal error (bad config, etc.) |
-
-**JSON completeness guarantee:** When `--json` is active, exit codes 0, 1, and 2 ALL produce valid, complete JSON on stdout. The macOS app can safely parse stdout regardless of exit code (0–2). Only exit code 3 may produce no stdout (fatal error before probing starts — error message goes to stderr only).
-
-**Ping-only failures do not affect exit code.** Exit code reflects probe (IP detection) results only. `snaky ping` has its own exit code logic: 0 = all reachable, 1 = some unreachable, 2 = all unreachable.
-
-macOS app should treat exit code 1 as "results available but incomplete" and display them with error indicators per endpoint.
-
 ---
 
 ## Proxy Support
@@ -457,7 +595,7 @@ macOS app should treat exit code 1 as "results available but incomplete" and dis
 - Do not add a proxy agent dependency (like `undici-proxy-agent`) in v1
 - Document in README that proxy env vars are not honored by default
 - If Node adds native proxy support in a future version, it will work automatically
-- Users who need proxy can set `--config` to point to a custom config, or use system-level transparent proxies (e.g., Proxifier, tun2socks)
+- Users who need proxy can use system-level transparent proxies (e.g., Proxifier, tun2socks)
 
 **Testing:** No proxy-related tests in v1. This is explicitly a non-guaranteed feature.
 
@@ -472,7 +610,8 @@ File: `~/.config/snaky/config.json`
   "endpoints": [
     { "name": "custom-cdn", "method": "cftrace", "domain": "mycdn.example.com" },
     { "name": "my-proxy-check", "method": "http-header", "url": "https://example.com/check", "headers": ["x-real-ip"] },
-    { "name": "openai", "disabled": true }
+    { "name": "openai", "disabled": true },
+    { "name": "my-service", "method": "http-header", "url": "https://my.example.com/ip", "headers": ["x-client-ip"], "disabled": true }
   ],
   "pingTargets": [
     { "name": "my-server", "url": "https://myserver.com/health", "tag": "custom" }
@@ -485,18 +624,19 @@ File: `~/.config/snaky/config.json`
 }
 ```
 
-**Rules:**
-- File created on first `snaky add`, `snaky disable`, or `snaky config show` invocation (not on bare `snaky` run)
+**File lifecycle:**
+- Created on first mutating operation: `snaky add`, `snaky disable`, `snaky enable`, `snaky config init`
+- **NOT** created by: `snaky`, `snaky probe`, `snaky ping`, `snaky list`, `snaky config path`, `snaky config show`
+- `snaky config show` outputs the effective (merged) config to stdout even when no file exists
 - Missing file = use built-in defaults with default settings
 - Malformed JSON = exit code 3 with clear error on stderr
-- `disabled: true` suppresses any endpoint with that name
 
 **Validation (applied on load, reject with exit code 3):**
 - `name`: required, must match `/^[a-z0-9][a-z0-9._-]{0,62}$/` (lowercase alphanumeric, dots, hyphens, underscores; 1–63 chars; must start with alphanumeric)
-- `domain` (cftrace): required; must be a valid hostname (no scheme, no path, no port)
-- `url` (http-header, http-ping): required; must be valid HTTPS URL
-- `headers` (http-header): non-empty array of valid header names
-- `method`: must be one of `cftrace`, `http-header`, `http-ping`
+- `domain` (cftrace): required unless `disabled: true`; must be a valid hostname (no scheme, no path, no port)
+- `url` (http-header, http-ping): required unless `disabled: true`; must be valid HTTPS URL
+- `headers` (http-header): required unless `disabled: true`; non-empty array of valid header names
+- `method`: must be one of `cftrace`, `http-header`, `http-ping`; can be omitted if only `disabled: true` (tombstone for built-in)
 - Duplicate names in the same config file → error (first occurrence does not win silently)
 - `timeout`: must be a positive integer, 100 ≤ timeout ≤ 60000 (ms)
 - `pingTimeout`: must be a positive integer, 100 ≤ pingTimeout ≤ 10000 (ms)
@@ -530,6 +670,13 @@ File: `~/.config/snaky/config.json`
 - Invokes `snaky --json` and parses the JSON output
 - Optional: periodic auto-refresh (configurable interval, default off)
 - Shows per-endpoint status: green/red indicators based on `ok` field
+
+### CLI Invocation & Timeout
+
+- **Total invocation timeout:** 90 seconds. If CLI does not exit within 90s, kill the process and show "CLI timed out" error.
+- **During refresh:** "Refresh" button shows a spinner and is non-interactive (no double-invoke)
+- **Cancel:** If user clicks Refresh again while a refresh is in-flight, the previous process is killed (SIGTERM → 2s grace → SIGKILL) and a new one starts.
+- **Partial output:** If CLI is killed mid-run, any stdout received so far is discarded (incomplete JSON is not parseable). App shows the previous result with a "refresh failed" indicator.
 
 ### First-Run & CLI Discovery
 
@@ -582,31 +729,38 @@ Priority order (stop at first success):
 | Snapshot    | vitest      | Table output, JSON output (success/failure/mixed) |
 | Integration | vitest      | Full probe against mock HTTP server (all methods) |
 | E2E         | vitest      | `snaky` binary invocation + exit codes       |
+| Live        | vitest (manual) | `test:live` script — real network validation (non-blocking) |
 
 ### Key Test Scenarios
 
 **cftrace parsing:**
-- Parse valid `/cdn-cgi/trace` response → extracts ip, loc, colo
+- Parse valid `/cdn-cgi/trace` response → extracts ip, loc (uppercase), colo
 - Malformed response (missing keys, garbage) → `PARSE_ERROR`
 - Empty response body → `PARSE_ERROR`
 - Response with only `ip=` (missing loc/colo) → partial success (ip extracted, others null)
 
 **http-header parsing:**
-- Response contains expected header → extracts IP
+- Response contains expected header with valid IPv4 → extracts IP
+- Response contains expected header with valid IPv6 → extracts IP
+- Header value contains comma-separated IPs → `PARSE_ERROR`
+- Header value contains port (1.2.3.4:8080) → `PARSE_ERROR`
+- Header value is empty string → `HEADER_MISSING`
 - Response missing all specified headers → `HEADER_MISSING`
-- Multiple headers specified, first found wins
-- Header value is not a valid IP → `PARSE_ERROR`
+- Multiple headers specified, first found wins (second not checked)
+- Leading/trailing whitespace trimmed before validation
 
 **http-ping:**
-- Any HTTP response (200, 204, 403, etc.) → success with responseTimeMs
-- Timeout → failure
-- Connection refused → failure
+- HTTP 200 response → success with responseTimeMs
+- HTTP 204 response → success (generate_204 endpoints)
+- HTTP 403 response → success (response received = connectivity confirmed)
+- Timeout → round recorded as -1
+- Connection refused → round recorded as -1
 
 **Connectivity test (ping):**
 - 12 rounds complete → median calculated correctly
-- Some rounds timeout (-1) → median of successful rounds only
-- All rounds timeout → failure with null medianMs
-- Warmup round not counted in results
+- Some rounds timeout (-1) → median of successful rounds only, `ok: true`
+- All rounds timeout → `ok: false`, `medianMs: null`, error code `ALL_TIMEOUT`
+- Warmup round not counted in results and not in `rounds` array
 
 **URL normalization:**
 - Bare domain → valid (cftrace inferred)
@@ -615,17 +769,20 @@ Priority order (stop at first success):
 - `http://` URL → normalized to domain (probe uses HTTPS)
 - `ftp://` → rejected with error
 - Trailing slashes stripped
+- Positional domain + `--method http-header` → error (conflicting)
 
 **Config & endpoint resolution:**
 - No config file → built-in defaults only
 - User endpoints merge with defaults
 - Name collision → user wins
-- Disabled endpoint → suppressed from probe
+- Disabled user endpoint (with full config preserved) → suppressed from probe
+- `snaky enable` on disabled user endpoint → config restored, endpoint active
 - `snaky remove` on user-added → deleted
 - `snaky remove` on user override of built-in → override deleted, built-in resurfaces
 - `snaky remove` on pure built-in → error message
-- `snaky disable` on built-in → suppressed
-- `snaky enable` on disabled → reactivated
+- `snaky disable` on built-in → tombstone added
+- `snaky disable` on user endpoint → `disabled: true` set, config preserved
+- `snaky enable` on tombstone → tombstone removed, built-in resurfaces
 - Corrupted JSON config file → exit code 3, clear error
 - Invalid name (uppercase, special chars, empty) → exit code 3
 - Duplicate endpoint names in config → exit code 3
@@ -635,40 +792,45 @@ Priority order (stop at first success):
 - http-header without headers array → exit code 3
 
 **Output snapshots (golden files):**
-- Table: all success (mixed methods)
+- Table: all success (mixed methods, location null for http-header)
 - Table: mixed success/failure
 - Table: all failure
-- JSON: all success (mixed methods)
-- JSON: mixed success/failure
-- JSON: all failure
+- JSON: mode=all (probe + ping combined)
+- JSON: mode=probe (ping is null)
+- JSON: mode=ping (probe is null)
+- JSON: mixed success/failure with fallback used
 - `snaky list` output with mixed sources and methods
 - `snaky ping` output: all reachable
 - `snaky ping` output: mixed reachable/unreachable
-- JSON: full run (probe + ping combined)
 
 **Timing & concurrency:**
 - Concurrent probes respect limit (mock server with delays)
 - Timeout fires correctly (mock server that never responds)
-- Total execution time ≈ max(endpoint latencies) when concurrency >= endpoint count
-- Retry logic: failed endpoint retried up to N times with backoff
+- Retry holds concurrency slot during backoff
+- Total execution time ≈ max(endpoint latencies) when concurrency >= endpoint count (no retries)
+- With retries: verify worst-case timing formula
 
 **Exit codes:**
-- All success → 0
-- Partial failure → 1
-- All failure → 2
+- All probes success → 0
+- Partial probe failure → 1
+- All probes failure → 2
 - Bad config → 3
+- Ping failures don't change exit code in all mode
 
 **Fallback domain (cftrace):**
-- Primary domain fails, fallback succeeds → reports success
-- Both primary and fallback fail → reports failure with last error
+- Primary domain fails, fallback succeeds → `usedFallback: true`, `resolvedTarget` set
+- Both primary and fallback fail → reports failure with last error, `usedFallback: false`
+- `responseTimeMs` is from the successful/final request only
 
 **macOS app (Xcode tests):**
-- Parse CLI JSON output (success fixture, all methods)
-- Parse CLI JSON output (mixed success/failure fixture)
-- Parse CLI JSON output (malformed → graceful error)
-- Parse connectivity results with rounds array
-- Unique IPs summary rendering
+- Parse CLI JSON output (mode=all, success fixture)
+- Parse CLI JSON output (mode=probe only)
+- Parse CLI JSON output (mixed success/failure with fallback)
+- Parse connectivity results with rounds array (-1 handling)
+- Unique IPs summary rendering (null location displayed as "—")
 - CLI not found state transitions
+- CLI timeout (90s) handling
+- Double-refresh cancel behavior
 
 ---
 
@@ -681,7 +843,8 @@ Priority order (stop at first success):
 - Validate config file on load, fail fast with actionable message
 - In `--json` mode, always output valid JSON on exit codes 0–2
 - Use `{ redirect: "manual" }` in all fetch calls
-- Retry failed probes before reporting final failure
+- Retry failed IP probes before reporting final failure
+- Preserve user endpoint config when disabling (don't replace with tombstone)
 
 ### Ask First
 - Adding dependencies beyond the minimal set listed above
@@ -698,6 +861,7 @@ Priority order (stop at first success):
 - Use Electron or web views for the macOS app
 - Follow HTTP redirects during probe (treat as misconfiguration)
 - Print anything to stdout except the final structured output
+- Perform GeoIP lookups in the CLI (location comes from CF only; null otherwise)
 
 ---
 
@@ -720,5 +884,6 @@ Priority order (stop at first success):
 - Custom trace URL paths (only `/cdn-cgi/trace` for cftrace method)
 - HTTP/1.1 vs HTTP/2 selection
 - ICMP ping (requires root/raw socket — we use HTTP-based latency)
-- GeoIP lookup (CLI detects exit IP + CF-provided location; rich geo display is app/web concern)
+- GeoIP lookup in CLI (rich geo display is app/web concern, not CLI)
 - Browser-only detection methods (e.g., Alibaba JSONP/DNS detection — requires DOM/script execution)
+- Parsing compound IP header values (comma-separated, port-suffixed)
