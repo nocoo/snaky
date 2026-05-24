@@ -68,7 +68,6 @@ describe("CLI binary E2E", () => {
 
 describe("CLI with mock server", () => {
   let server: Server;
-  let port: number;
   let dir: string;
   let configPath: string;
 
@@ -102,11 +101,7 @@ describe("CLI with mock server", () => {
     });
 
     await new Promise<void>((resolve) => {
-      server.listen(0, "127.0.0.1", () => {
-        const addr = server.address();
-        if (addr && typeof addr === "object") port = addr.port;
-        resolve();
-      });
+      server.listen(0, "127.0.0.1", () => resolve());
     });
 
     // Write config pointing to our mock server
