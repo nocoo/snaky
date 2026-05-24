@@ -2,6 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./builtins.js";
 
+const NAME_RE = /^[a-z0-9][a-z0-9._-]{0,62}$/;
+const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
 type MutateSuccess = { ok: true; message?: string };
 type MutateError = { ok: false; error: string };
 type MutateResult = MutateSuccess | MutateError;
@@ -30,6 +34,32 @@ export type AddInput =
   | { name: string; method: "http-ping"; url: string };
 
 export function addEndpoint(configPath: string, input: AddInput): MutateResult {
+  if (!NAME_RE.test(input.name)) {
+    return { ok: false, error: `Invalid name "${input.name}": must match /^[a-z0-9][a-z0-9._-]{0,62}$/` };
+  }
+
+  if (input.method === "cftrace") {
+    const d = input.domain;
+    if (d.includes("://")) return { ok: false, error: "Domain must not include scheme" };
+    if (d.includes(":")) return { ok: false, error: "Domain must not include port" };
+    if (d.includes("/")) return { ok: false, error: "Domain must not include path" };
+    if (!DOMAIN_RE.test(d)) return { ok: false, error: `Invalid domain "${d}"` };
+  }
+
+  if (input.method === "http-header" || input.method === "http-ping") {
+    if (!input.url.startsWith("https://")) {
+      return { ok: false, error: "URL must be HTTPS" };
+    }
+  }
+
+  if (input.method === "http-header") {
+    for (const h of input.headers) {
+      if (!HEADER_NAME_RE.test(h)) {
+        return { ok: false, error: `Invalid header name "${h}"` };
+      }
+    }
+  }
+
   const config = readConfigFile(configPath);
 
   const allEndpoints = config.endpoints ?? [];

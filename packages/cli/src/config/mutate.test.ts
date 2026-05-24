@@ -103,6 +103,47 @@ describe("config mutation", () => {
       });
       expect(result.ok).toBe(false);
     });
+
+    it("rejects invalid name (uppercase)", () => {
+      const result = addEndpoint(configPath, {
+        name: "BadName",
+        method: "cftrace",
+        domain: "example.com",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/Invalid name/);
+    });
+
+    it("rejects cftrace domain with port", () => {
+      const result = addEndpoint(configPath, {
+        name: "test",
+        method: "cftrace",
+        domain: "example.com:8443",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/port/i);
+    });
+
+    it("rejects http-ping with non-HTTPS url", () => {
+      const result = addEndpoint(configPath, {
+        name: "test",
+        method: "http-ping",
+        url: "http://example.com/health",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/HTTPS/i);
+    });
+
+    it("rejects http-header with invalid header name", () => {
+      const result = addEndpoint(configPath, {
+        name: "test",
+        method: "http-header",
+        url: "https://example.com/check",
+        headers: ["bad header"],
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/invalid header name/i);
+    });
   });
 
   describe("removeEndpoint", () => {
