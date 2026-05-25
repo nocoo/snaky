@@ -72,16 +72,15 @@ Build a native macOS menu bar (status bar) app that visualizes Snaky CLI output.
 
 ### Version Compatibility
 
-- App reads `snaky --version` on launch
-- If version is below minimum supported, show warning with upgrade command
-- App does not hard-fail on version mismatch (graceful degradation)
+- App reads `snaky --version` on launch and displays it in the panel footer
+- MVP does not enforce a minimum version check (graceful degradation — parse what you can)
+- Post-MVP: if version parsing is needed, define `minimumCLIVersion` as a constant in source
 
 ### Invocation Timeout & Process Lifecycle
 
 - **Total timeout**: 90 seconds. If CLI does not exit within 90s, kill the process (SIGTERM → 2s grace → SIGKILL) and show "CLI timed out" error.
-- **During refresh**: Refresh button shows spinner and is non-interactive (prevents double-invoke).
-- **Cancel/re-invoke**: If user clicks Refresh while a refresh is in-flight, the previous process is killed (SIGTERM → 2s grace → SIGKILL) and a new one starts.
-- **Partial stdout**: If CLI is killed mid-run, any stdout received so far is discarded (incomplete JSON is not parseable). App preserves the previous result and shows a "refresh failed" indicator.
+- **During refresh**: Refresh button label changes to "Cancel". Clicking it kills the in-flight process (SIGTERM → 2s grace → SIGKILL) and restores the button to "Refresh" with previous results preserved.
+- **Partial stdout**: If CLI is killed mid-run (cancel or timeout), any stdout received so far is discarded (incomplete JSON is not parseable). App preserves the previous result and shows a "refresh cancelled" or "timed out" indicator.
 
 ### Exit Code Handling
 
@@ -196,7 +195,6 @@ struct ProbeEntry: Decodable {
 enum ProbeMethod: String, Decodable {
     case cftrace
     case httpHeader = "http-header"
-    case httpPing = "http-ping"
 }
 
 struct ProbeError: Decodable {
@@ -267,7 +265,7 @@ apps/macos/
 ├── SnakyCoreTests/
 │   ├── ModelDecodingTests.swift
 │   ├── CLIBridgeTests.swift
-│   └── Fixtures/           # JSON fixtures from CLI golden files
+│   └── Fixtures/           # JSON fixtures maintained here, manually synced from CLI schema
 └── scripts/
     ├── build.sh
     └── package-dmg.sh
@@ -280,14 +278,13 @@ apps/macos/
 ```bash
 # Build macOS app (Xcode)
 cd apps/macos
-xcodebuild -scheme Snaky -configuration Debug build
+xcodebuild -scheme Snaky -configuration Debug -derivedDataPath Build build
 
 # Run in debug (Xcode)
 open Snaky.xcodeproj  # Cmd+R in Xcode
 
-# Or via command line
-xcodebuild -scheme Snaky -configuration Debug build
-./Build/Products/Debug/Snaky.app/Contents/MacOS/Snaky
+# Or via command line after build
+./Build/Build/Products/Debug/Snaky.app/Contents/MacOS/Snaky
 
 # Package for distribution
 ./scripts/build.sh
@@ -317,7 +314,7 @@ xcodebuild -scheme Snaky -configuration Debug build
 - Exit code 3: no JSON on stdout, app shows fatal error from stderr
 - CLI not found: state transitions to setup view
 - CLI timeout (90s): process killed, previous results preserved
-- Double-refresh cancel: first process killed, second starts fresh
+- Double-refresh cancel: click Cancel kills process, button reverts to Refresh, previous results preserved
 - Empty results (`summary.total == 0`): shows "No endpoints configured"
 
 ---
@@ -352,12 +349,12 @@ xcodebuild -scheme Snaky -configuration Debug build
 ## Atomic Commit Plan
 
 1. `chore: init apps/macos/ Xcode project skeleton` — menu bar app target + SnakyCore framework target + test target
-2. `test: CLI JSON model decoding` — XCTest with fixture JSON files covering all exit code scenarios, complete Decodable structs
+2. `test: CLI JSON model decoding` — XCTest with hand-crafted JSON fixtures (synced from CLI schema), covering all exit code scenarios
 3. `feat: implement data models` — all structs/enums matching CLI JSON schema
 4. `test: CLI discovery logic` — unit tests for path resolution priority
 5. `feat: CLI discovery and bridge service` — process spawning, 90s timeout, exit code handling, SIGTERM/SIGKILL lifecycle
 6. `feat: AppDelegate + NSStatusItem + NSPopover shell` — menu bar icon, popover wiring, activation policy
 7. `feat: SwiftUI PopoverContentView` — unique IP summary, probe section, ping section with latency colors
-8. `feat: refresh logic` — on-open auto-fetch, manual button, cancel/re-invoke, loading states
+8. `feat: refresh logic` — on-open auto-fetch, Cancel button semantics, loading states
 9. `feat: error states and setup view` — CLI not found, timeout, crash, exit code 3 handling
 10. `test: integration test with real CLI` — spawns installed `snaky`, verifies end-to-end decode
