@@ -8,6 +8,8 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var state: ViewState = .idle
     @Published public var previousResult: FullOutput?
     @Published public private(set) var cliVersion: String?
+    @Published public private(set) var lastUpdated: Date?
+    @Published public private(set) var statusMessage: String?
 
     public enum ViewState: Equatable {
         case idle
@@ -25,6 +27,7 @@ public final class AppViewModel: ObservableObject {
     public func refresh() {
         currentTask?.cancel()
         state = .loading
+        statusMessage = nil
         currentTask = Task {
             if cliVersion == nil {
                 cliVersion = await bridge.fetchVersion()
@@ -33,12 +36,17 @@ public final class AppViewModel: ObservableObject {
                 let output = try await bridge.invoke()
                 guard !Task.isCancelled else { return }
                 previousResult = output
+                lastUpdated = Date()
                 state = .success(output)
             } catch let error as CLIError {
                 guard !Task.isCancelled else { return }
+                if error == .timeout {
+                    statusMessage = "Timed out"
+                }
                 state = .error(error)
             } catch {
                 guard !Task.isCancelled else { return }
+                statusMessage = "Timed out"
                 state = .error(.timeout)
             }
         }
@@ -47,6 +55,7 @@ public final class AppViewModel: ObservableObject {
     public func cancel() {
         currentTask?.cancel()
         currentTask = nil
+        statusMessage = "Refresh cancelled"
         if let previous = previousResult {
             state = .success(previous)
         } else {

@@ -34,14 +34,29 @@ public struct PopoverContentView: View {
         .frame(width: 360, height: 600)
         .onAppear { viewModel.refresh() }
         .safeAreaInset(edge: .bottom) {
-            if let version = viewModel.cliVersion {
-                Divider()
-                Text("snaky v\(version)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+            if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {
+                VStack(spacing: 2) {
+                    Divider()
+                    HStack {
+                        if let status = viewModel.statusMessage {
+                            Text(status)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        } else if let date = viewModel.lastUpdated {
+                            Text("Updated \(date, style: .relative) ago")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        if let version = viewModel.cliVersion {
+                            Text("snaky v\(version)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                     .padding(.horizontal)
                     .padding(.vertical, 4)
+                }
             }
         }
     }
