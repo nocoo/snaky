@@ -20,7 +20,7 @@ public struct PopoverContentView: View {
                     successView(output)
                 case .error(let error):
                     if error == .notFound {
-                        SetupView(onRedetect: { viewModel.refresh() })
+                        SetupView(onBrowse: { viewModel.selectCLIPath() }, onRedetect: { viewModel.refresh() })
                     } else {
                         errorBanner(error)
                         if let previous = viewModel.previousResult {

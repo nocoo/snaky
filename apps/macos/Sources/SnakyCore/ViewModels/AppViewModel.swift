@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -47,5 +48,18 @@ public final class AppViewModel: ObservableObject {
         } else {
             state = .idle
         }
+    }
+
+    public func selectCLIPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Select the snaky binary"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let path = url.path
+        guard FileManager.default.isExecutableFile(atPath: path) else { return }
+        UserDefaults.standard.set(path, forKey: "cliPath")
+        refresh()
     }
 }
