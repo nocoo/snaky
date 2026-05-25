@@ -1,6 +1,6 @@
 {
   "name": "@nocoo/snaky",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "IP routing probe & latency tester",
   "type": "module",
   "bin": {
@@ -32,6 +32,12 @@
   ],
   "author": "nocoo",
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },

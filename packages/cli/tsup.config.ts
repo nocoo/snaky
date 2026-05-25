@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig } from "tsup";
 
-const { version } = JSON.parse(readFileSync("./package.json", "utf-8"));
+const { version } = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf-8"),
+);
 
 export default defineConfig({
   entry: ["src/index.ts"],

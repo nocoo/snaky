@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "build": "pnpm --filter @nocoo/snaky build",
@@ -10,7 +10,9 @@
     "test:e2e": "pnpm --filter @nocoo/snaky test:e2e",
     "lint": "pnpm --filter @nocoo/snaky lint",
     "typecheck": "pnpm --filter @nocoo/snaky typecheck",
-    "prepare": "husky"
+    "prepare": "husky",
+    "version:bump": "bun scripts/bump-version.ts",
+    "release": "bun scripts/release.ts"
   },
   "engines": {
     "node": ">=20"
