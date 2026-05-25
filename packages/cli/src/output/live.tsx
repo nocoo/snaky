@@ -42,12 +42,13 @@ function ProbeRow({ slot }: { slot: ProbeSlot }): React.ReactElement {
   }
   const entry = slot.entry!;
   if (entry.ok) {
+    const latStr = `${entry.responseTimeMs}ms`;
     return (
       <Text>
         <Text color="green">✓</Text> {entry.name.padEnd(16)}{" "}
         {(entry.location ?? "—").padEnd(8)}{" "}
         {(entry.colo ?? "—").padEnd(5)}{" "}
-        <Text color={latencyColor(entry.responseTimeMs)}>{entry.responseTimeMs}ms</Text>
+        <Text color={latencyColor(entry.responseTimeMs)}>{latStr.padStart(7)}</Text>
         {"  "}{entry.ip}
       </Text>
     );
@@ -56,7 +57,7 @@ function ProbeRow({ slot }: { slot: ProbeSlot }): React.ReactElement {
     <Text>
       <Text color="red">✗</Text> {entry.name.padEnd(16)}{" "}
       {"—".padEnd(8)} {"—".padEnd(5)}{" "}
-      <Text color="red">{entry.error.code}</Text>
+      <Text color="red">{"UNKNOWN".padStart(7)}</Text>
     </Text>
   );
 }
@@ -71,11 +72,12 @@ function PingRow({ slot }: { slot: PingSlot }): React.ReactElement {
   }
   const r = slot.result!;
   if (r.ok) {
+    const latStr = `${r.medianMs}ms`;
     return (
       <Text>
         <Text color="green">✓</Text> {r.name.padEnd(18)}{" "}
         {r.tag.padEnd(14)}{" "}
-        <Text color={latencyColor(r.medianMs ?? 0)}>{r.medianMs}ms</Text>
+        <Text color={latencyColor(r.medianMs ?? 0)}>{latStr.padStart(7)}</Text>
       </Text>
     );
   }
@@ -83,7 +85,7 @@ function PingRow({ slot }: { slot: PingSlot }): React.ReactElement {
     <Text>
       <Text color="red">✗</Text> {r.name.padEnd(18)}{" "}
       {r.tag.padEnd(14)}{" "}
-      <Text color="red">FAILED</Text>
+      <Text color="red">{"FAILED".padStart(7)}</Text>
     </Text>
   );
 }
