@@ -153,4 +153,30 @@ struct CLIBridgeTests {
             #expect(error == .notFound)
         }
     }
+
+    @Test func cancelKillsProcess() async throws {
+        let executor = DefaultProcessExecutor()
+        let task = Task {
+            try await executor.run(
+                executablePath: "/bin/sleep",
+                arguments: ["60"],
+                timeout: .seconds(90)
+            )
+        }
+
+        try await Task.sleep(for: .milliseconds(200))
+        task.cancel()
+
+        let start = ContinuousClock.now
+        let result = await task.result
+        let elapsed = ContinuousClock.now - start
+
+        #expect(elapsed < .seconds(5))
+        switch result {
+        case .success(let output):
+            #expect(output.exitCode != 0)
+        case .failure:
+            break
+        }
+    }
 }

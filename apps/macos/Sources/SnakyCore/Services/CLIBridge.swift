@@ -47,31 +47,39 @@ public struct DefaultProcessExecutor: ProcessExecutor {
 
         try process.run()
 
-        return try await withThrowingTaskGroup(of: ProcessOutput?.self) { group in
-            group.addTask {
-                process.waitUntilExit()
-                let out = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let err = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                return ProcessOutput(exitCode: process.terminationStatus, stdout: out, stderr: err)
-            }
-
-            group.addTask {
-                try await Task.sleep(for: timeout)
-                if process.isRunning {
-                    process.terminate()
-                    try? await Task.sleep(for: .seconds(2))
-                    if process.isRunning { process.interrupt() }
+        return try await withTaskCancellationHandler {
+            try await withThrowingTaskGroup(of: ProcessOutput?.self) { group in
+                group.addTask {
+                    process.waitUntilExit()
+                    let out = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                    let err = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    return ProcessOutput(exitCode: process.terminationStatus, stdout: out, stderr: err)
                 }
-                return nil
-            }
 
-            guard let result = try await group.next(),
-                  let output = result else {
+                group.addTask {
+                    try await Task.sleep(for: timeout)
+                    if process.isRunning {
+                        kill(process.processIdentifier, SIGKILL)
+                    }
+                    return nil
+                }
+
+                guard let result = try await group.next(),
+                      let output = result else {
+                    group.cancelAll()
+                    throw CLIError.timeout
+                }
                 group.cancelAll()
-                throw CLIError.timeout
+                return output
             }
-            group.cancelAll()
-            return output
+        } onCancel: {
+            process.terminate()
+            let pid = process.processIdentifier
+            DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                if process.isRunning {
+                    kill(pid, SIGKILL)
+                }
+            }
         }
     }
 }
