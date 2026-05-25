@@ -106,6 +106,8 @@ public struct PopoverContentView: View {
         if let previous = viewModel.previousResult {
             successView(previous)
                 .opacity(0.5)
+        } else {
+            SkeletonView()
         }
     }
 
