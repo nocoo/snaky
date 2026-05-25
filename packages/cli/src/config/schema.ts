@@ -128,6 +128,10 @@ function validateEndpoint(
   }
   allNames.add(name);
 
+  if (ep.tier !== undefined) {
+    validateInt(ep.tier, `Endpoint "${name}" tier`, 1, 9, errors);
+  }
+
   const disabled = ep.disabled === true;
   const method = ep.method as string | undefined;
 
@@ -180,10 +184,6 @@ function validateEndpoint(
         }
       }
     }
-  }
-
-  if (ep.tier !== undefined) {
-    validateInt(ep.tier, `Endpoint "${name}" tier`, 1, 9, errors);
   }
 }
 

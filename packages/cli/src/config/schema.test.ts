@@ -398,4 +398,12 @@ describe("validateConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[0]).toMatch(/pt1.*tier/i);
   });
+
+  it("rejects invalid tier on disabled endpoint tombstone", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "openai", disabled: true, tier: "two" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/openai.*tier/i);
+  });
 });
