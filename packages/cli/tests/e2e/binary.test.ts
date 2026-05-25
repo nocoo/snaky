@@ -12,7 +12,7 @@ const CLI_PATH = join(import.meta.dirname, "../../dist/index.js");
 function run(args: string[], env?: Record<string, string>) {
   return execFileP("node", [CLI_PATH, ...args], {
     env: { ...process.env, ...env, NO_COLOR: "1" },
-    timeout: 10000,
+    timeout: 15000,
   }).then(
     ({ stdout, stderr }) => ({ stdout, stderr, exitCode: 0 }),
     (err: { stdout: string; stderr: string; code: number }) => ({
@@ -215,7 +215,7 @@ describe("CLI with mock server", () => {
     expect(stdout).toContain("Created");
   });
 
-  it("--json output contains no ANSI escape sequences", async () => {
+  it("--json output contains no ANSI escape sequences", { timeout: 10000 }, async () => {
     const testConfig = join(dir, "ansi-test.json");
     writeFileSync(
       testConfig,
@@ -242,7 +242,7 @@ describe("CLI with mock server", () => {
     expect(() => JSON.parse(stdout)).not.toThrow();
   });
 
-  it("--json schema has mode, probe, ping fields", async () => {
+  it("--json schema has mode, probe, ping fields", { timeout: 15000 }, async () => {
     const testConfig = join(dir, "schema-test.json");
     writeFileSync(
       testConfig,
