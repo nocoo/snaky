@@ -389,19 +389,6 @@ async function handleRun(
         formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
       );
     }
-  } else {
-    // Live TUI already displayed results; print static summary for scroll-back
-    process.stdout.write("\n");
-    if (pingResults) {
-      process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
-    }
-    if (probeEntries) {
-      if (pingResults) process.stdout.write("\n");
-      const uniqueIps = buildUniqueSummary(probeResults ?? []);
-      process.stdout.write(
-        formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
-      );
-    }
   }
 
   return computeExitCode(mode, probeResults, pingResults);
