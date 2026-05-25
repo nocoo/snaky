@@ -28,8 +28,8 @@ private struct PingCell: View {
         HStack(spacing: 6) {
             FaviconView(name: model.name, isSuccess: model.isSuccess)
                 .frame(width: 16, height: 16)
-            Text(displayName)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+            Text(Theme.displayName(for: model.name))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
             Spacer()
@@ -43,7 +43,4 @@ private struct PingCell: View {
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
-    private var displayName: String {
-        model.name.hasPrefix("ping-") ? String(model.name.dropFirst(5)) : model.name
-    }
 }

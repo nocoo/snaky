@@ -26,8 +26,8 @@ private struct ProbeRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(model.name)
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    Text(Theme.displayName(for: model.name))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     if model.usedFallback {

@@ -19,6 +19,69 @@ enum Theme {
         }
         return String(chars.map { Character($0) })
     }
+
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    static func displayName(for key: String) -> String {
+        let stripped = key.hasPrefix("ping-") ? String(key.dropFirst(5)) : key
+        switch stripped {
+        case "netease": return "网易"
+        case "bytedance", "bytedance-intl": return "字节跳动"
+        case "qualcomm-cn": return "高通中国"
+        case "taobao": return "淘宝"
+        case "wechat": return "微信"
+        case "anthropic": return "Anthropic"
+        case "claude": return "Claude"
+        case "chatgpt": return "ChatGPT"
+        case "openai": return "OpenAI"
+        case "sora": return "Sora"
+        case "grok": return "Grok"
+        case "perplexity": return "Perplexity"
+        case "midjourney": return "Midjourney"
+        case "deepseek": return "DeepSeek"
+        case "cursor": return "Cursor"
+        case "poe": return "Poe"
+        case "huggingface": return "Hugging Face"
+        case "replicate": return "Replicate"
+        case "discord": return "Discord"
+        case "x": return "X"
+        case "medium": return "Medium"
+        case "reddit": return "Reddit"
+        case "tumblr": return "Tumblr"
+        case "telegram": return "Telegram"
+        case "coinbase": return "Coinbase"
+        case "okx": return "OKX"
+        case "binance": return "Binance"
+        case "kraken": return "Kraken"
+        case "zoom": return "Zoom"
+        case "1password": return "1Password"
+        case "wise": return "Wise"
+        case "godaddy": return "GoDaddy"
+        case "producthunt": return "Product Hunt"
+        case "notion": return "Notion"
+        case "linear": return "Linear"
+        case "canva": return "Canva"
+        case "figma": return "Figma"
+        case "vercel": return "Vercel"
+        case "cloudflare": return "Cloudflare"
+        case "cdnjs": return "cdnjs"
+        case "npm": return "npm"
+        case "unpkg": return "unpkg"
+        case "nodejs": return "Node.js"
+        case "gitlab": return "GitLab"
+        case "github": return "GitHub"
+        case "kali": return "Kali"
+        case "docker": return "Docker"
+        case "pypi": return "PyPI"
+        case "crates": return "crates.io"
+        case "hackernews": return "Hacker News"
+        case "crunchyroll": return "Crunchyroll"
+        case "spotify": return "Spotify"
+        case "soundcloud": return "SoundCloud"
+        case "twitch": return "Twitch"
+        case "youtube": return "YouTube"
+        default: return stripped
+        }
+    }
 }
 
 struct CardModifier: ViewModifier {
