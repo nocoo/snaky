@@ -117,13 +117,11 @@ public struct PopoverContentView: View {
         if let ping = output.ping, !ping.results.isEmpty {
             PingSection(results: ping.results)
         }
-        if let probe = output.probe {
-            if !probe.results.isEmpty {
-                ProbeSection(entries: probe.results)
-            }
-            if !probe.uniqueIps.isEmpty {
-                UniqueIpSection(ips: probe.uniqueIps)
-            }
+        if let probe = output.probe, !probe.uniqueIps.isEmpty {
+            UniqueIpSection(ips: deduplicatedIps(probe.uniqueIps))
+        }
+        if let probe = output.probe, !probe.results.isEmpty {
+            ProbeSection(entries: probe.results)
         }
         if output.probe?.results.isEmpty ?? true && output.ping?.results.isEmpty ?? true {
             ContentUnavailableView(
@@ -132,6 +130,11 @@ public struct PopoverContentView: View {
                 description: Text("No endpoints configured")
             )
         }
+    }
+
+    private func deduplicatedIps(_ ips: [UniqueIp]) -> [UniqueIp] {
+        var seen = Set<String>()
+        return ips.filter { seen.insert($0.ip).inserted }
     }
 
     private func errorBanner(_ error: CLIError) -> some View {
