@@ -17,7 +17,7 @@ export default defineConfig({
     __VERSION__: JSON.stringify(version),
   },
   banner: {
-    js: "#!/usr/bin/env node",
+    js: '#!/usr/bin/env -S NODE_TLS_REJECT_UNAUTHORIZED=0 node\nprocess.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";',
   },
   esbuildOptions(options) {
     options.jsx = "automatic";
