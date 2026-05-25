@@ -131,6 +131,18 @@ public struct CLIBridge: Sendable {
         }
     }
 
+    public func fetchVersion() async -> String? {
+        guard let path = await discovery.discover() else { return nil }
+        let output = try? await executor.run(
+            executablePath: path,
+            arguments: ["--version"],
+            timeout: .seconds(5)
+        )
+        guard let output, output.exitCode == 0 else { return nil }
+        return String(data: output.stdout, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func decodeOutput(_ data: Data) throws -> FullOutput {
         do {
             return try JSONDecoder().decode(FullOutput.self, from: data)

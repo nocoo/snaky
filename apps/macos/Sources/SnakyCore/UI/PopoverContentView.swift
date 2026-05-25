@@ -33,6 +33,17 @@ public struct PopoverContentView: View {
         }
         .frame(width: 360, height: 600)
         .onAppear { viewModel.refresh() }
+        .safeAreaInset(edge: .bottom) {
+            if let version = viewModel.cliVersion {
+                Divider()
+                Text("snaky v\(version)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
+            }
+        }
     }
 
     private var headerRow: some View {

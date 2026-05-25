@@ -179,4 +179,28 @@ struct CLIBridgeTests {
             break
         }
     }
+
+    @Test func fetchVersionSuccess() async throws {
+        let versionData = Data("1.2.3\n".utf8)
+        let discovery = CLIDiscovery(
+            fileChecker: MockFileChecker(existingPaths: ["/usr/local/bin/snaky"]),
+            shellExecutor: MockShellExecutor(),
+            configuredPath: { "/usr/local/bin/snaky" }
+        )
+        let executor = MockProcessExecutor(exitCode: 0, stdout: versionData)
+        let bridge = CLIBridge(discovery: discovery, executor: executor)
+        let version = await bridge.fetchVersion()
+        #expect(version == "1.2.3")
+    }
+
+    @Test func fetchVersionNotFound() async throws {
+        let discovery = CLIDiscovery(
+            fileChecker: MockFileChecker(existingPaths: []),
+            shellExecutor: MockShellExecutor(),
+            configuredPath: { nil }
+        )
+        let bridge = CLIBridge(discovery: discovery, executor: MockProcessExecutor())
+        let version = await bridge.fetchVersion()
+        #expect(version == nil)
+    }
 }

@@ -7,6 +7,7 @@ public final class AppViewModel: ObservableObject {
 
     @Published public private(set) var state: ViewState = .idle
     @Published public var previousResult: FullOutput?
+    @Published public private(set) var cliVersion: String?
 
     public enum ViewState: Equatable {
         case idle
@@ -25,6 +26,9 @@ public final class AppViewModel: ObservableObject {
         currentTask?.cancel()
         state = .loading
         currentTask = Task {
+            if cliVersion == nil {
+                cliVersion = await bridge.fetchVersion()
+            }
             do {
                 let output = try await bridge.invoke()
                 guard !Task.isCancelled else { return }
