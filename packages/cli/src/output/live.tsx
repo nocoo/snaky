@@ -16,6 +16,7 @@ type AppProps = {
 
 export type LiveCallbacks = {
   setProbeResult: (index: number, entry: ProbeEntry) => void;
+  setPingResult: (index: number, result: PingResult) => void;
   setPingResults: (results: PingResult[]) => void;
   setComplete: () => void;
 };
@@ -108,6 +109,13 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
         setProbes((prev) => {
           const next = [...prev];
           next[index] = { status: "done", entry };
+          return next;
+        });
+      },
+      setPingResult(index, result) {
+        setPings((prev) => {
+          const next = [...prev];
+          next[index] = { status: "done", result };
           return next;
         });
       },

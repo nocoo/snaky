@@ -334,7 +334,7 @@ async function handleRun(
         concurrency,
         pingFn: (url, opts) => probeHttpPing(url, opts),
         onResult: liveCallbacks
-          ? (_index, _result) => {}
+          ? (index, result) => { liveCallbacks!.setPingResult(index, result); }
           : undefined,
       })
     : null;
@@ -342,9 +342,6 @@ async function handleRun(
   // Execute concurrently
   [probeResults, pingResults] = await Promise.all([probeTask, pingTask]);
 
-  if (liveCallbacks && pingResults) {
-    liveCallbacks.setPingResults(pingResults);
-  }
   if (liveCallbacks) {
     liveCallbacks.setComplete();
   }
