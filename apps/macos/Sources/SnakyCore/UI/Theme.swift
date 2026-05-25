@@ -10,6 +10,15 @@ enum Theme {
     static let primaryText = Color.white.opacity(0.92)
     static let secondaryText = Color.white.opacity(0.55)
     static let tertiaryText = Color.white.opacity(0.35)
+
+    static func flagEmoji(for location: String?) -> String {
+        guard let location, location.count == 2 else { return "🌐" }
+        let base: UInt32 = 127_397
+        let chars = location.uppercased().unicodeScalars.compactMap {
+            Unicode.Scalar(base + $0.value)
+        }
+        return String(chars.map { Character($0) })
+    }
 }
 
 struct CardModifier: ViewModifier {

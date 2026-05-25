@@ -38,6 +38,8 @@ private struct ProbeRow: View {
                 }
                 HStack(spacing: 8) {
                     if model.isSuccess {
+                        Text(Theme.flagEmoji(for: model.location == "—" ? nil : model.location))
+                            .font(.system(size: 10))
                         Text(model.ip)
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(Theme.secondaryText)
