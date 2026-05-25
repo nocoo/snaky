@@ -112,7 +112,7 @@ snaky/
 │   │   └── output/        # JSON / 表格 / 实时 TUI
 │   └── tests/             # 单元测试 + 端到端测试
 ├── scripts/               # 版本管理、发布脚本
-└── apps/                  # macOS 菜单栏应用（规划中）
+└── apps/macos/            # macOS 菜单栏应用（规划中）
 ```
 
 ## 技术栈
