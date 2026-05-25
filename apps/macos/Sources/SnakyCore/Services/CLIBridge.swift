@@ -106,15 +106,22 @@ public struct CLIBridge: Sendable {
         guard let path = await discovery.discover() else {
             throw CLIError.notFound
         }
-        return try await invoke(executablePath: path)
+        return try await invoke(executablePath: path, arguments: ["--json"])
     }
 
-    public func invoke(executablePath path: String) async throws -> FullOutput {
+    public func invoke(mode: String) async throws -> FullOutput {
+        guard let path = await discovery.discover() else {
+            throw CLIError.notFound
+        }
+        return try await invoke(executablePath: path, arguments: [mode, "--json"])
+    }
+
+    private func invoke(executablePath path: String, arguments args: [String]) async throws -> FullOutput {
         let output: ProcessOutput
         do {
             output = try await executor.run(
                 executablePath: path,
-                arguments: ["--json"],
+                arguments: args,
                 timeout: invocationTimeout
             )
         } catch let error as CLIError {
