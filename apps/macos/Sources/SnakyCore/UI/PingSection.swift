@@ -3,12 +3,17 @@ import SwiftUI
 struct PingSection: View {
     let results: [PingResult]
 
+    private let columns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(icon: "waveform.path", title: "Ping")
-            VStack(spacing: 2) {
+            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(results, id: \.name) { result in
-                    PingRow(model: PingRowModel(from: result))
+                    PingCell(model: PingRowModel(from: result))
                 }
             }
         }
@@ -16,42 +21,40 @@ struct PingSection: View {
     }
 }
 
-private struct PingRow: View {
+private struct PingCell: View {
     let model: PingRowModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(model.isSuccess ? Color.green : Color.red)
-                .frame(width: 7, height: 7)
-                .offset(y: 4)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(model.name)
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.primaryText)
-                        .lineLimit(1)
-                    Badge(text: model.tag)
-                }
-                HStack(spacing: 2) {
-                    ForEach(Array(model.dots.enumerated()), id: \.offset) { _, dot in
-                        let barHeight = dot.isSuccess
-                            ? CGFloat(min(max(dot.ms / 30.0, 0.3), 1.0)) * 10
-                            : CGFloat(3)
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(dot.isSuccess ? Color.green.opacity(0.8) : Color.red.opacity(0.6))
-                            .frame(width: 4, height: barHeight)
-                    }
-                }
-                .frame(height: 10, alignment: .bottom)
-            }
+        HStack(spacing: 6) {
+            tagIcon
+                .font(.system(size: 12))
+                .frame(width: 16)
+            Text(displayName)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(Theme.primaryText)
+                .lineLimit(1)
             Spacer()
             Text(model.medianText)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(model.latencyColor.color)
-                .frame(minWidth: 50, alignment: .trailing)
         }
-        .padding(.vertical, 5)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Theme.cardBackground.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private var displayName: String {
+        model.name.hasPrefix("ping-") ? String(model.name.dropFirst(5)) : model.name
+    }
+
+    @ViewBuilder
+    private var tagIcon: some View {
+        if model.tag == "domestic" {
+            Text("🇨🇳")
+        } else {
+            Image(systemName: "globe")
+                .foregroundStyle(Theme.secondaryText)
+        }
     }
 }
