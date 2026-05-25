@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 
-# G1: Static analysis (tsc + biome) || L1: Unit tests
-# Both must pass; run in parallel for speed (<30s target)
+# G1: Static analysis || L1: Unit tests
+# All must pass; run in parallel for speed (<30s target)
 
+# --- CLI (TypeScript) ---
 pnpm --filter @nocoo/snaky typecheck &
 pid_typecheck=$!
 
@@ -12,9 +13,22 @@ pid_lint=$!
 pnpm --filter @nocoo/snaky test &
 pid_test=$!
 
+# --- macOS app (Swift) ---
+(cd apps/macos && swift build -Xswiftc -warnings-as-errors 2>&1) &
+pid_swift_build=$!
+
+(cd apps/macos && swift test 2>&1) &
+pid_swift_test=$!
+
+(cd apps/macos && swiftlint --strict 2>&1) &
+pid_swiftlint=$!
+
 fail=0
 wait $pid_typecheck || fail=1
 wait $pid_lint || fail=1
 wait $pid_test || fail=1
+wait $pid_swift_build || fail=1
+wait $pid_swift_test || fail=1
+wait $pid_swiftlint || fail=1
 
 exit $fail
