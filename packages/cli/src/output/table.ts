@@ -51,6 +51,30 @@ export function formatProbeTable(
 
   const succeeded = entries.filter((e) => e.ok).length;
   const total = entries.length;
+
+  const hasDetails = uniqueIps.some((u) => u.detail);
+  if (hasDetails) {
+    lines.push("");
+    lines.push(bold("IP Summary", opts));
+    lines.push("─".repeat(72));
+    lines.push(padIpRow(["IP", "Location", "Count", "ISP", "ASN"]));
+    lines.push("─".repeat(72));
+    for (const u of uniqueIps) {
+      const d = u.detail;
+      const loc = d
+        ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
+        : u.location ?? "—";
+      lines.push(padIpRow([
+        u.ip,
+        loc,
+        String(u.count),
+        d?.isp ?? "—",
+        d?.asn ? String(d.asn) : "—",
+      ]));
+    }
+  }
+
+  lines.push("─".repeat(72));
   const ipSummary = uniqueIps
     .map((u) => `${u.ip}${u.location ? ` (${u.location})` : ""}`)
     .join(", ");
@@ -109,6 +133,13 @@ function padRow(cols: string[]): string {
 
 function padRow3(cols: string[]): string {
   const widths = [22, 15, 10];
+  return cols
+    .map((c, i) => (i < cols.length - 1 ? c.padEnd(widths[i] ?? 0) : c))
+    .join(" ");
+}
+
+function padIpRow(cols: string[]): string {
+  const widths = [18, 12, 6, 20, 0];
   return cols
     .map((c, i) => (i < cols.length - 1 ? c.padEnd(widths[i] ?? 0) : c))
     .join(" ");

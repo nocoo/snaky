@@ -7,12 +7,13 @@ import { computeExitCode } from "./cli/exit-code.js";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./config/builtins.js";
 import { loadConfig } from "./config/loader.js";
 import { addEndpoint, disableEndpoint, enableEndpoint, removeEndpoint } from "./config/mutate.js";
+import { loadSecrets } from "./config/secrets.js";
 import type { Endpoint } from "./config/types.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
 import { formatPingTable, formatProbeTable } from "./output/table.js";
-import type { FullOutput, ProbeEntry } from "./output/types.js";
+import type { FullOutput, IpDetail, ProbeEntry } from "./output/types.js";
 import { probeWithFallback } from "./probes/fallback.js";
 import { probeHttpHeader } from "./probes/http-header.js";
 import { probeHttpPing } from "./probes/http-ping.js";
@@ -20,6 +21,7 @@ import type { ProbeResult } from "./probes/types.js";
 import { runPing } from "./runner/ping-runner.js";
 import { runProbes } from "./runner/probe-runner.js";
 import { buildUniqueSummary } from "./runner/summary.js";
+import { lookupIps } from "./services/echo.js";
 
 declare const __VERSION__: string;
 
@@ -363,6 +365,25 @@ async function handleRun(
     });
   }
 
+  // Enrich IPs with geo/ISP data from Echo API
+  const uniqueIps = probeResults ? buildUniqueSummary(probeResults) : [];
+  let ipDetails: IpDetail[] | undefined;
+
+  if (probeResults && uniqueIps.length > 0) {
+    const secrets = loadSecrets();
+    if (secrets.echoApiKey) {
+      const ips = uniqueIps.map((u) => u.ip);
+      const infoMap = await lookupIps(ips, secrets.echoApiKey);
+      if (infoMap.size > 0) {
+        for (const u of uniqueIps) {
+          const info = infoMap.get(u.ip);
+          if (info) u.detail = info;
+        }
+        ipDetails = [...infoMap.values()];
+      }
+    }
+  }
+
   // Output
   const mode = command.mode;
   if (flags.json) {
@@ -376,10 +397,11 @@ async function handleRun(
               succeeded: probeEntries.filter((e) => e.ok).length,
               failed: probeEntries.filter((e) => !e.ok).length,
             },
-            uniqueIps: buildUniqueSummary(probeResults ?? []),
+            uniqueIps,
           }
         : null,
       ping: pingResults ? { results: pingResults } : null,
+      ...(ipDetails ? { ipDetails } : {}),
     };
     process.stdout.write(`${formatJson(output)}\n`);
   } else if (!useLiveTui) {
@@ -388,7 +410,6 @@ async function handleRun(
     }
     if (probeEntries) {
       if (pingResults) process.stdout.write("\n");
-      const uniqueIps = buildUniqueSummary(probeResults ?? []);
       process.stdout.write(
         formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
       );

@@ -1,9 +1,11 @@
 import type { ProbeResult } from "../probes/types.js";
+import type { IpInfo } from "../services/echo.js";
 
 export type UniqueIp = {
   ip: string;
   location: string | null;
   count: number;
+  detail?: IpInfo;
 };
 
 export function buildUniqueSummary(results: ProbeResult[]): UniqueIp[] {

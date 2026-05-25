@@ -1,5 +1,8 @@
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
+import type { IpInfo } from "../services/echo.js";
+
+export type IpDetail = IpInfo;
 
 type ProbeEntryBase = {
   name: string;
@@ -46,4 +49,5 @@ export type FullOutput = {
   mode: OutputMode;
   probe: ProbeSectionOutput | null;
   ping: PingSectionOutput | null;
+  ipDetails?: IpDetail[];
 };
