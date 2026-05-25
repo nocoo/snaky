@@ -4,14 +4,15 @@ struct ProbeSection: View {
     let entries: [ProbeEntry]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Probes")
-                .font(.headline)
-                .padding(.bottom, 2)
-            ForEach(entries, id: \.name) { entry in
-                ProbeRow(model: ProbeRowModel(from: entry))
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(icon: "arrow.triangle.branch", title: "Probes", badge: "\(entries.count)")
+            VStack(spacing: 2) {
+                ForEach(entries, id: \.name) { entry in
+                    ProbeRow(model: ProbeRowModel(from: entry))
+                }
             }
         }
+        .card()
     }
 }
 
@@ -19,47 +20,44 @@ private struct ProbeRow: View {
     let model: ProbeRowModel
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: model.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundStyle(model.isSuccess ? .green : .red)
-                .font(.caption)
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(model.isSuccess ? Color.green : Color.red)
+                .frame(width: 7, height: 7)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
                     Text(model.name)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     if model.usedFallback {
-                        Text("fallback")
-                            .font(.caption2)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(.orange.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                        Badge(text: "fallback", color: .orange, background: .orange.opacity(0.15))
                     }
                 }
                 HStack(spacing: 8) {
                     if model.isSuccess {
                         Text(model.ip)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Theme.secondaryText)
                         Text(model.location)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.secondaryText)
                         Text(model.colo)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.tertiaryText)
                     } else {
                         Text(model.errorCode ?? "ERROR")
-                            .font(.caption)
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.red)
                     }
                 }
             }
             Spacer()
             Text(model.latencyText)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(model.latencyColor.color)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 5)
     }
 }
