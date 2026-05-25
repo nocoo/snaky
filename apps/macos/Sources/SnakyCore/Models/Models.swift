@@ -6,31 +6,31 @@ public enum RunMode: String, Decodable, Sendable {
     case ping
 }
 
-public struct FullOutput: Decodable, Sendable {
+public struct FullOutput: Decodable, Sendable, Equatable {
     public let mode: RunMode
     public let probe: ProbeOutput?
     public let ping: PingOutput?
 }
 
-public struct ProbeOutput: Decodable, Sendable {
+public struct ProbeOutput: Decodable, Sendable, Equatable {
     public let results: [ProbeEntry]
     public let summary: ProbeSummary
     public let uniqueIps: [UniqueIp]
 }
 
-public struct ProbeSummary: Decodable, Sendable {
+public struct ProbeSummary: Decodable, Sendable, Equatable {
     public let total: Int
     public let succeeded: Int
     public let failed: Int
 }
 
-public struct UniqueIp: Decodable, Sendable {
+public struct UniqueIp: Decodable, Sendable, Equatable {
     public let ip: String
     public let location: String?
     public let count: Int
 }
 
-public struct ProbeEntry: Decodable, Sendable {
+public struct ProbeEntry: Decodable, Sendable, Equatable {
     public let name: String
     public let category: String
     public let method: ProbeMethod
@@ -50,7 +50,7 @@ public enum ProbeMethod: String, Decodable, Sendable {
     case httpHeader = "http-header"
 }
 
-public struct ProbeError: Decodable, Sendable {
+public struct ProbeError: Decodable, Sendable, Equatable {
     public let code: ErrorCode
     public let message: String
 }
@@ -68,11 +68,11 @@ public enum ErrorCode: String, Decodable, Sendable {
     case unknown = "UNKNOWN"
 }
 
-public struct PingOutput: Decodable, Sendable {
+public struct PingOutput: Decodable, Sendable, Equatable {
     public let results: [PingResult]
 }
 
-public struct PingResult: Decodable, Sendable {
+public struct PingResult: Decodable, Sendable, Equatable {
     public let name: String
     public let tag: String
     public let ok: Bool
