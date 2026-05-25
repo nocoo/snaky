@@ -4,7 +4,7 @@ import Testing
 @testable import SnakyCore
 
 struct IntegrationTests {
-    private func findSnaky() -> String? {
+    private static func findSnaky() -> String? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = [
             "/opt/homebrew/bin/snaky",
@@ -33,11 +33,11 @@ struct IntegrationTests {
         return nil
     }
 
-    @Test func realCLIJsonOutput() async throws {
-        guard let path = findSnaky() else {
-            try #require(Bool(false), "snaky CLI not installed, skipping integration test")
-            return
-        }
+    private static let snakyAvailable: Bool = findSnaky() != nil
+
+    @Test(.enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
+    func realCLIJsonOutput() async throws {
+        guard let path = Self.findSnaky() else { return }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
@@ -64,11 +64,9 @@ struct IntegrationTests {
         }
     }
 
-    @Test func realCLIVersion() async throws {
-        guard let path = findSnaky() else {
-            try #require(Bool(false), "snaky CLI not installed, skipping integration test")
-            return
-        }
+    @Test(.enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
+    func realCLIVersion() async throws {
+        guard let path = Self.findSnaky() else { return }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
@@ -88,12 +86,8 @@ struct IntegrationTests {
         #expect(version.contains(semverPattern))
     }
 
-    @Test func bridgeEndToEnd() async throws {
-        guard findSnaky() != nil else {
-            try #require(Bool(false), "snaky CLI not installed, skipping integration test")
-            return
-        }
-
+    @Test(.enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
+    func bridgeEndToEnd() async throws {
         let bridge = CLIBridge(timeout: .seconds(30))
         let output = try await bridge.invoke()
         #expect(output.mode == .all)
