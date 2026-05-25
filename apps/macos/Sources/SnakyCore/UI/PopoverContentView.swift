@@ -111,16 +111,16 @@ public struct PopoverContentView: View {
 
     @ViewBuilder
     private func successView(_ output: FullOutput) -> some View {
+        if let ping = output.ping, !ping.results.isEmpty {
+            PingSection(results: ping.results)
+        }
         if let probe = output.probe {
-            if !probe.uniqueIps.isEmpty {
-                UniqueIpSection(ips: probe.uniqueIps)
-            }
             if !probe.results.isEmpty {
                 ProbeSection(entries: probe.results)
             }
-        }
-        if let ping = output.ping, !ping.results.isEmpty {
-            PingSection(results: ping.results)
+            if !probe.uniqueIps.isEmpty {
+                UniqueIpSection(ips: probe.uniqueIps)
+            }
         }
         if output.probe?.results.isEmpty ?? true && output.ping?.results.isEmpty ?? true {
             ContentUnavailableView(
