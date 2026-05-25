@@ -352,4 +352,50 @@ describe("validateConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[0]).toMatch(/tier/);
   });
+
+  it("accepts valid tier on endpoint", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "ep1", method: "cftrace", domain: "x.com", tier: 2 }],
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects non-integer tier on endpoint", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "ep1", method: "cftrace", domain: "x.com", tier: "two" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/ep1.*tier/i);
+  });
+
+  it("rejects out-of-range tier on endpoint", () => {
+    const result = validateConfig({
+      endpoints: [{ name: "ep1", method: "cftrace", domain: "x.com", tier: 0 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/ep1.*tier/i);
+  });
+
+  it("accepts valid tier on ping target", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "pt1", url: "https://x.com/h", tag: "t", tier: 3 }],
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects non-integer tier on ping target", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "pt1", url: "https://x.com/h", tag: "t", tier: 1.5 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/pt1.*tier/i);
+  });
+
+  it("rejects out-of-range tier on ping target", () => {
+    const result = validateConfig({
+      pingTargets: [{ name: "pt1", url: "https://x.com/h", tag: "t", tier: 10 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors[0]).toMatch(/pt1.*tier/i);
+  });
 });

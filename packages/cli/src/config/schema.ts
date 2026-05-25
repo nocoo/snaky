@@ -181,6 +181,10 @@ function validateEndpoint(
       }
     }
   }
+
+  if (ep.tier !== undefined) {
+    validateInt(ep.tier, `Endpoint "${name}" tier`, 1, 9, errors);
+  }
 }
 
 function validatePingTarget(
@@ -214,5 +218,9 @@ function validatePingTarget(
     } else if (!isValidHttpsUrl(pt.url)) {
       errors.push(`Ping target "${name}" url must be a valid HTTPS URL`);
     }
+  }
+
+  if (pt.tier !== undefined) {
+    validateInt(pt.tier, `Ping target "${name}" tier`, 1, 9, errors);
   }
 }
