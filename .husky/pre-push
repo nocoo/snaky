@@ -3,9 +3,13 @@
 # L2: E2E tests || G2: Security (gitleaks + osv-scanner)
 # Both must pass; run in parallel (<3min target)
 
-# L2: E2E integration tests (requires build)
+# L2: CLI E2E integration tests (requires build)
 (pnpm --filter @nocoo/snaky build && pnpm --filter @nocoo/snaky test:e2e) &
 pid_e2e=$!
+
+# L2: Swift integration tests (real CLI invocation)
+(cd apps/macos && swift test --filter IntegrationTests 2>&1) &
+pid_swift_e2e=$!
 
 # G2: Security scanning
 (
@@ -29,6 +33,7 @@ pid_g2=$!
 
 fail=0
 wait $pid_e2e || fail=1
+wait $pid_swift_e2e || fail=1
 wait $pid_g2 || fail=1
 
 exit $fail
