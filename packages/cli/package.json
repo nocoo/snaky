@@ -4,7 +4,7 @@
   "description": "IP routing probe & latency tester",
   "type": "module",
   "bin": {
-    "snaky": "./dist/index.js"
+    "snaky": "dist/index.js"
   },
   "exports": {
     ".": {
