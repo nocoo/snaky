@@ -154,6 +154,13 @@ pnpm dev           # 监听模式构建
 | L2 端到端 | 二进制调用、JSON 输出、退出码 (14 tests) | pre-push |
 | G1 静态检查 | tsc --noEmit + biome check | pre-commit |
 
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [docs/architecture/01-tui-overhaul.md](docs/architecture/01-tui-overhaul.md) | TUI 重构与端点分层设计 |
+| [docs/features/01-macos-menubar-app.md](docs/features/01-macos-menubar-app.md) | macOS 菜单栏应用 spec |
+
 ## License
 
 [MIT](LICENSE) © 2026
