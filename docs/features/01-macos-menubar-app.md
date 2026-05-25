@@ -296,11 +296,26 @@ open Snaky.xcodeproj  # Cmd+R in Xcode
 
 ## Testing Strategy (6DQ)
 
-| Layer | Content | Trigger |
-|-------|---------|---------|
-| L1 Unit | Model decoding (all exit code scenarios), CLIBridge output parsing, ViewModel state transitions, discovery logic | pre-commit |
-| G1 Static | `xcodebuild` strict concurrency warnings, swiftlint | pre-commit |
-| L2 Integration | CLIBridge spawns real `snaky` process, verifies JSON decode end-to-end | pre-push |
+### Coverage Requirements
+
+- **Line coverage**: ≥ 95% on SnakyCore target
+- **Exclusions**: Only `Snaky/` app shell entry point (AppDelegate bootstrap, NSApplication lifecycle) may be excluded. All SnakyCore code must be covered.
+- **CI gate**: Coverage below threshold fails the build
+
+### Lint & Static Analysis (G1)
+
+- **Swift compiler**: `-warnings-as-errors` — zero warnings allowed
+- **Strict concurrency**: `SWIFT_STRICT_CONCURRENCY=complete`
+- **SwiftLint**: `--strict` mode, 0 violations (warning or error)
+- **Trigger**: pre-commit (runs in parallel with L1 unit tests)
+
+### Test Layers
+
+| Layer | Content | Trigger | Tool |
+|-------|---------|---------|------|
+| L1 Unit | Model decoding, CLIBridge parsing, ViewModel state, discovery logic | pre-commit (<30s) | XCTest |
+| G1 Static | `xcodebuild` (warnings-as-errors, strict concurrency) + swiftlint --strict | pre-commit | xcodebuild + swiftlint |
+| L2 Integration | CLIBridge spawns real `snaky` process, verifies JSON decode end-to-end | pre-push (<60s) | XCTest |
 
 ### Key Test Scenarios
 
@@ -315,6 +330,8 @@ open Snaky.xcodeproj  # Cmd+R in Xcode
 - CLI timeout (90s): process killed, previous results preserved
 - Double-refresh cancel: click Cancel kills process, button reverts to Refresh, previous results preserved
 - Empty results (`summary.total == 0`): shows "No endpoints configured"
+- ViewModel state machine: idle → loading → success / error transitions
+- Discovery fallback chain: configured path → well-known paths → login shell → not found
 
 ---
 
@@ -347,13 +364,171 @@ open Snaky.xcodeproj  # Cmd+R in Xcode
 
 ## Atomic Commit Plan
 
-1. `chore: init apps/macos/ Xcode project skeleton` — menu bar app target + SnakyCore framework target + test target
-2. `test: CLI JSON model decoding` — XCTest with hand-crafted JSON fixtures (synced from CLI schema), covering all exit code scenarios
-3. `feat: implement data models` — all structs/enums matching CLI JSON schema
-4. `test: CLI discovery logic` — unit tests for path resolution priority
-5. `feat: CLI discovery and bridge service` — process spawning, 90s timeout, exit code handling, SIGTERM/SIGKILL lifecycle
-6. `feat: AppDelegate + NSStatusItem + NSPopover shell` — menu bar icon, popover wiring, activation policy
-7. `feat: SwiftUI PopoverContentView` — unique IP summary, probe section, ping section with latency colors
-8. `feat: refresh logic` — on-open auto-fetch, Cancel button semantics, loading states
-9. `feat: error states and setup view` — CLI not found, timeout, crash, exit code 3 handling
-10. `test: integration test with real CLI` — spawns installed `snaky`, verifies end-to-end decode
+Each step = one atomic commit. TDD: tests written before or alongside implementation. Every commit must pass `xcodebuild` (warnings-as-errors) + swiftlint --strict.
+
+---
+
+### Step 1 — `chore: init apps/macos/ Xcode project skeleton`
+
+- Create `apps/macos/Snaky.xcodeproj` with 3 targets:
+  - `Snaky` (app, menu bar agent)
+  - `SnakyCore` (framework, all testable logic)
+  - `SnakyCoreTests` (unit test bundle)
+- Configure build settings: `SWIFT_STRICT_CONCURRENCY=complete`, `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES`
+- Add `.swiftlint.yml` with strict rules, 0 tolerance
+- Verify: `xcodebuild -scheme Snaky build` succeeds with 0 warnings
+
+---
+
+### Step 2 — `test: CLI JSON model decoding`
+
+**Tests (red phase — written first, all fail):**
+- `testDecodeFullOutputModeAll` — mode=all, both probe and ping present
+- `testDecodeFullOutputModeProbe` — mode=probe, ping is null
+- `testDecodeFullOutputModePing` — mode=ping, probe is null
+- `testDecodeProbeEntrySuccess` — all fields: ip, location, colo, responseTimeMs, usedFallback=false
+- `testDecodeProbeEntryWithFallback` — usedFallback=true, resolvedTarget present
+- `testDecodeProbeEntryFailure` — ok=false, error code/message, responseTimeMs=null (DNS_FAILED)
+- `testDecodeProbeEntryFailureWithTime` — ok=false, TIMEOUT, responseTimeMs present
+- `testDecodeProbeSummary` — total/succeeded/failed counts
+- `testDecodeUniqueIps` — ip, location (nullable), count
+- `testDecodePingResultSuccess` — ok=true, medianMs, rounds array (positive values)
+- `testDecodePingResultPartial` — ok=true, some rounds=-1, medianMs from successful only
+- `testDecodePingResultAllFailed` — ok=false, medianMs=null, all rounds=-1, error
+- `testDecodeErrorCodes` — each ErrorCode enum case round-trips correctly
+
+**Fixtures (JSON files in `SnakyCoreTests/Fixtures/`):**
+- `full-output-all-success.json`
+- `full-output-probe-only.json`
+- `full-output-ping-only.json`
+- `full-output-partial-failure.json`
+- `full-output-with-fallback.json`
+
+---
+
+### Step 3 — `feat: implement data models`
+
+**Implementation (green phase — make tests pass):**
+- All structs/enums from Data Models section: `FullOutput`, `RunMode`, `ProbeOutput`, `ProbeSummary`, `UniqueIp`, `ProbeEntry`, `ProbeMethod`, `ProbeError`, `ErrorCode`, `PingOutput`, `PingResult`
+- All tests from Step 2 pass
+- Coverage: 100% on Models/ directory
+
+---
+
+### Step 4 — `test: CLI discovery logic`
+
+**Tests:**
+- `testDiscoveryUsesConfiguredPathFirst` — UserDefaults has path → returns it without checking others
+- `testDiscoveryConfiguredPathInvalid` — configured path doesn't exist → falls through to well-known
+- `testDiscoveryWellKnownPaths` — `/opt/homebrew/bin/snaky` exists → returns it
+- `testDiscoveryWellKnownOrder` — checks Apple Silicon path before Intel path
+- `testDiscoveryLoginShellFallback` — well-known paths miss, shell returns path → uses it
+- `testDiscoveryLoginShellTimeout` — shell hangs >3s → killed, returns nil
+- `testDiscoveryNotFound` — all methods fail → returns nil
+
+**Design**: `CLIDiscovery` uses protocol `FileExistenceChecker` and `ShellExecutor` for DI/testability.
+
+---
+
+### Step 5 — `feat: CLI discovery and bridge service`
+
+**Implementation:**
+- `CLIDiscovery` — path resolution with DI protocols
+- `CLIBridge` — `func invoke() async throws -> FullOutput`
+  - Spawns `Foundation.Process` with discovered path + `["--json"]`
+  - Collects stdout via `Pipe`, applies 90s timeout (`Task.sleep` + process kill)
+  - Exit code routing: 0/1/2 → decode JSON; 3 → throw `CLIError.fatal(stderr)`; crash → throw `CLIError.crashed`
+  - SIGTERM → 2s grace → SIGKILL on cancel/timeout
+- `CLIError` enum: `.notFound`, `.fatal(String)`, `.crashed(Int32)`, `.timeout`, `.decodingFailed(Error)`
+
+**Tests:**
+- `testBridgeExitCode0` — mock process exits 0 with valid JSON → decoded
+- `testBridgeExitCode1` — mock exits 1 with valid JSON → decoded (not thrown)
+- `testBridgeExitCode2` — mock exits 2 with valid JSON → decoded (not thrown)
+- `testBridgeExitCode3` — mock exits 3, no JSON → throws .fatal with stderr content
+- `testBridgeTimeout` — mock process sleeps >90s → killed, throws .timeout
+- `testBridgeCrash` — mock exits 139 (SIGSEGV) → throws .crashed
+- `testBridgeMalformedJSON` — valid exit code but garbage stdout → throws .decodingFailed
+
+---
+
+### Step 6 — `feat: AppDelegate + NSStatusItem + NSPopover shell`
+
+- `AppDelegate`: sets `.accessory` activation policy, creates status item
+- `StatusItem`: NSStatusItem with SF Symbol, left-click → toggle popover, right-click → context menu (Quit)
+- `NSPopover` with `.transient` behavior, sized 360x600
+- Content: placeholder SwiftUI view ("Loading...")
+- No tests needed for pure AppKit wiring (excluded from coverage target)
+
+---
+
+### Step 7 — `feat: SwiftUI PopoverContentView`
+
+**Implementation:**
+- `PopoverContentView` — container with sections
+- `UniqueIpSection` — displays `uniqueIps` with location flags
+- `ProbeSection` — list of probe results, latency colors, ✓/✗ icons, fallback badge
+- `PingSection` — list of ping results, median latency, round dots
+
+**Tests (ViewModel, not View):**
+- `testViewModelProbeRowMapping` — ProbeEntry → display model (icon, color, subtitle)
+- `testViewModelLatencyColor` — ≤200ms green, 201-1000ms yellow, >1000ms red
+- `testViewModelPingRoundDots` — rounds array → dot colors (green/red for -1)
+- `testViewModelNullLocationDisplay` — location=nil → "—"
+- `testViewModelFallbackDisplay` — usedFallback → shows resolvedTarget
+
+---
+
+### Step 8 — `feat: refresh logic`
+
+**Implementation:**
+- `AppViewModel`: state machine `idle → loading → success(FullOutput) | error(CLIError)`
+- Popover `onAppear` → triggers refresh
+- Refresh button → calls `viewModel.refresh()`
+- During loading: button shows spinner + "Cancel", clicking calls `viewModel.cancel()`
+- Cancel: kills in-flight process, state reverts to previous (idle or last success)
+
+**Tests:**
+- `testRefreshOnAppear` — opening panel triggers invoke
+- `testRefreshSuccess` — state transitions: idle → loading → success
+- `testRefreshFailure` — state transitions: idle → loading → error
+- `testCancelDuringRefresh` — state transitions: loading → previous state preserved
+- `testRefreshAfterSuccess` — new success replaces old; old displayed during loading
+- `testRefreshAfterError` — error state → loading → new result
+
+---
+
+### Step 9 — `feat: error states and setup view`
+
+**Implementation:**
+- `SetupView` — shown when CLI not found (install commands, Browse button, Re-detect button)
+- Error banner in popover for timeout/crash/exit-3
+- Previous results remain visible below error banner
+
+**Tests:**
+- `testNotFoundShowsSetupView` — discovery returns nil → SetupView presented
+- `testTimeoutShowsErrorBanner` — .timeout → error banner text matches
+- `testCrashedShowsErrorBanner` — .crashed → shows exit code in banner
+- `testFatalShowsStderrMessage` — .fatal(msg) → banner shows msg
+- `testPreviousResultsPreservedOnError` — after success, refresh fails → old data still shown
+
+---
+
+### Step 10 — `test: integration test with real CLI`
+
+- Requires `snaky` installed (skipped in CI if not available via `XCTSkipIf`)
+- Spawns real `snaky --json --timeout 3000` with short timeout
+- Verifies: stdout parses into `FullOutput`, mode == .all, probe/ping both non-nil
+- Verifies: `snaky --version` returns parseable semver string
+
+---
+
+### Quality Gates Summary
+
+| Gate | Requirement | Enforced at |
+|------|-------------|-------------|
+| L1 Coverage | ≥ 95% line on SnakyCore | Every commit |
+| G1 Compiler | 0 warnings (`-warnings-as-errors`) | Every commit |
+| G1 SwiftLint | 0 violations (`--strict`) | Every commit |
+| G1 Concurrency | `SWIFT_STRICT_CONCURRENCY=complete` | Every commit |
+| L2 Integration | Real CLI round-trip | pre-push |
