@@ -9,7 +9,7 @@
       },
       "style": {
         "useConst": "error",
-        "noNonNullAssertion": "info"
+        "noNonNullAssertion": "error"
       }
     }
   },
