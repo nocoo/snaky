@@ -5,7 +5,7 @@ public final class AppViewModel: ObservableObject {
     private let bridge: CLIBridge
 
     @Published public private(set) var state: ViewState = .idle
-    @Published public private(set) var previousResult: FullOutput?
+    @Published public var previousResult: FullOutput?
 
     public enum ViewState: Equatable {
         case idle
