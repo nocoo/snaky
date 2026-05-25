@@ -6,7 +6,7 @@ struct ProbeSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(icon: "arrow.triangle.branch", title: "Probes")
-            VStack(spacing: 2) {
+            VStack(spacing: 6) {
                 ForEach(entries, id: \.name) { entry in
                     ProbeRow(model: ProbeRowModel(from: entry))
                 }
@@ -20,12 +20,11 @@ private struct ProbeRow: View {
     let model: ProbeRowModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .center, spacing: 10) {
             FaviconView(name: model.name, isSuccess: model.isSuccess)
-                .frame(width: 16, height: 16)
-                .offset(y: 1)
+                .frame(width: 28, height: 28)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(model.name)
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -58,6 +57,6 @@ private struct ProbeRow: View {
                 .foregroundStyle(model.latencyColor.color)
                 .frame(minWidth: 50, alignment: .trailing)
         }
-        .padding(.vertical, 5)
+        .padding(.vertical, 6)
     }
 }
