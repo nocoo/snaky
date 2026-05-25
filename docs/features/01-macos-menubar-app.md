@@ -299,14 +299,14 @@ swift build -Xswiftc -warnings-as-errors
 
 ### Coverage Requirements
 
-- **Line coverage**: ≥ 95% on SnakyCore target
+- **Line coverage**: ≥ 95% on SnakyCore target (aspirational — not yet enforced in CI)
 - **Exclusions**: Only `Snaky/` app shell entry point (AppDelegate bootstrap, NSApplication lifecycle) may be excluded. All SnakyCore code must be covered.
-- **CI gate**: Coverage below threshold fails the build
+- **CI gate**: Not yet configured (macOS Swift tests not in CI pipeline; local pre-commit hook enforces build + lint + test)
 
 ### Lint & Static Analysis (G1)
 
 - **Swift compiler**: `-warnings-as-errors` — zero warnings allowed
-- **Strict concurrency**: `SWIFT_STRICT_CONCURRENCY=complete`
+- **Strict concurrency**: Swift 6 language mode (strict concurrency is the default, no extra flags needed)
 - **SwiftLint**: `--strict` mode, 0 violations (warning or error)
 - **Trigger**: pre-commit (runs in parallel with L1 unit tests)
 
@@ -375,7 +375,7 @@ Each step = one atomic commit. TDD: tests written before or alongside implementa
   - `Snaky` (executableTarget, menu bar agent)
   - `SnakyCore` (library, all testable logic)
   - `SnakyCoreTests` (testTarget)
-- Configure `Package.swift`: `.enableExperimentalFeature("StrictConcurrency")`
+- Configure `Package.swift`: `swift-tools-version: 6.0` (strict concurrency by default)
 - Add `.swiftlint.yml` with strict rules, 0 tolerance
 - Verify: `swift build` succeeds with 0 warnings
 
@@ -528,8 +528,8 @@ Each step = one atomic commit. TDD: tests written before or alongside implementa
 
 | Gate | Requirement | Enforced at |
 |------|-------------|-------------|
-| L1 Coverage | ≥ 95% line on SnakyCore | Every commit |
-| G1 Compiler | 0 warnings (`swift build -Xswiftc -warnings-as-errors`) | Every commit |
-| G1 SwiftLint | 0 violations (`--strict`) | Every commit |
-| G1 Concurrency | `SWIFT_STRICT_CONCURRENCY=complete` | Every commit |
-| L2 Integration | Real CLI round-trip | pre-push |
+| L1 Coverage | ≥ 95% line on SnakyCore (aspirational) | Not yet automated |
+| G1 Compiler | 0 warnings (`swift build -Xswiftc -warnings-as-errors`) | pre-commit hook |
+| G1 SwiftLint | 0 violations (`--strict`) | pre-commit hook |
+| G1 Concurrency | Swift 6 strict concurrency (language default) | Every build |
+| L2 Integration | Real CLI round-trip | pre-push hook |
