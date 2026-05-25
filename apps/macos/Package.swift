@@ -10,7 +10,10 @@ let package = Package(
     targets: [
         .target(
             name: "SnakyCore",
-            path: "Sources/SnakyCore"
+            path: "Sources/SnakyCore",
+            resources: [
+                .copy("Resources")
+            ]
         ),
         .executableTarget(
             name: "Snaky",

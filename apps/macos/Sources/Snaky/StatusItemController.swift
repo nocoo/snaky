@@ -35,7 +35,8 @@ final class StatusItemController {
         panel.contentView = hostingView
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
+            button.image = SnakyCore.menuBarIcon
+                ?? NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
             button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])

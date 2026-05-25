@@ -66,9 +66,13 @@ public struct PopoverContentView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center) {
-            Image(systemName: "network")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.sectionTitle)
+            if let logoURL = Bundle.module.url(forResource: "logo", withExtension: "png", subdirectory: "Resources"),
+               let nsImage = NSImage(contentsOf: logoURL) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
             Text("Snaky")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(Theme.primaryText)
