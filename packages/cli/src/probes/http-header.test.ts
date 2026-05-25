@@ -7,7 +7,7 @@ let port: number;
 
 beforeAll(async () => {
   server = createServer((req, res) => {
-    const url = new URL(req.url!, `http://localhost`);
+    const url = new URL(req.url ?? "/", `http://localhost`);
 
     if (url.pathname === "/valid-ip") {
       res.writeHead(200, { "cdn-user-ip": "10.0.0.1" });

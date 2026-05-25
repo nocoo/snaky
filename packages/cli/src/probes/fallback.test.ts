@@ -9,7 +9,7 @@ beforeAll(async () => {
   let _primaryCallCount = 0;
 
   server = createServer((req, res) => {
-    const url = new URL(req.url!, `http://localhost`);
+    const url = new URL(req.url ?? "/", `http://localhost`);
 
     if (url.pathname === "/primary/cdn-cgi/trace") {
       _primaryCallCount++;

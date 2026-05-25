@@ -76,7 +76,7 @@ describe("CLI with mock server", () => {
     configPath = join(dir, "config.json");
 
     server = createServer((req, res) => {
-      const url = new URL(req.url!, `http://localhost`);
+      const url = new URL(req.url ?? "/", `http://localhost`);
 
       if (url.pathname === "/cdn-cgi/trace") {
         res.writeHead(200);

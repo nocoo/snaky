@@ -7,11 +7,11 @@ let port: number;
 
 beforeAll(async () => {
   server = createServer((req, res) => {
-    const url = new URL(req.url!, `http://localhost`);
+    const url = new URL(req.url ?? "/", `http://localhost`);
 
     if (url.pathname === "/cdn-cgi/trace") {
       if (url.searchParams.get("delay")) {
-        const delay = parseInt(url.searchParams.get("delay")!, 10);
+        const delay = parseInt(url.searchParams.get("delay") ?? "0", 10);
         setTimeout(() => {
           res.writeHead(200);
           res.end("ip=1.2.3.4\nloc=US\ncolo=LAX\n");
