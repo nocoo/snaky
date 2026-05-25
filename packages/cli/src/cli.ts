@@ -245,7 +245,7 @@ async function handleRun(
   }
 
   // Build async tasks
-  const useLiveTui = !flags.json && process.stdout.isTTY;
+  const useLiveTui = !flags.json && !flags.noColor && process.stdout.isTTY;
   let liveCallbacks: LiveCallbacks | null = null;
   let liveUnmount: (() => void) | null = null;
 
