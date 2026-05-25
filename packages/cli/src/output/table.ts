@@ -16,7 +16,7 @@ export function formatProbeTable(
   }
 
   const lines: string[] = [];
-  lines.push(bold("Split Tunnel Probe", opts));
+  lines.push(bold("🔀 Split Tunnel Probe", opts));
   lines.push("━".repeat(72));
   lines.push(
     padRow(["Endpoint", "Location", "Colo", "Latency", "IP"]),
@@ -52,27 +52,8 @@ export function formatProbeTable(
   const succeeded = entries.filter((e) => e.ok).length;
   const total = entries.length;
 
-  const hasDetails = uniqueIps.some((u) => u.detail);
-  if (hasDetails) {
-    lines.push("");
-    lines.push(bold("IP Summary", opts));
-    lines.push("─".repeat(72));
-    lines.push(padIpRow(["IP", "Location", "Count", "ISP", "ASN"]));
-    lines.push("─".repeat(72));
-    for (const u of uniqueIps) {
-      const d = u.detail;
-      const loc = d
-        ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
-        : u.location ?? "—";
-      lines.push(padIpRow([
-        u.ip,
-        loc,
-        String(u.count),
-        d?.isp ?? "—",
-        d?.asn ? String(d.asn) : "—",
-      ]));
-    }
-  }
+  const ipSummaryTable = formatIpSummaryTable(uniqueIps, opts);
+  if (ipSummaryTable) lines.push("", ipSummaryTable);
 
   lines.push("─".repeat(72));
   const ipSummary = uniqueIps
@@ -86,6 +67,34 @@ export function formatProbeTable(
   return `${lines.join("\n")}\n`;
 }
 
+export function formatIpSummaryTable(
+  uniqueIps: UniqueIp[],
+  opts: TableOpts = {},
+): string | null {
+  const hasDetails = uniqueIps.some((u) => u.detail);
+  if (!hasDetails) return null;
+
+  const lines: string[] = [];
+  lines.push(bold("🌐 IP Summary", opts));
+  lines.push("─".repeat(72));
+  lines.push(padIpRow(["IP", "Location", "Count", "ISP", "ASN"]));
+  lines.push("─".repeat(72));
+  for (const u of uniqueIps) {
+    const d = u.detail;
+    const loc = d
+      ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
+      : u.location ?? "—";
+    lines.push(padIpRow([
+      u.ip,
+      loc,
+      String(u.count),
+      d?.isp ?? "—",
+      d?.asn ? String(d.asn) : "—",
+    ]));
+  }
+  return lines.join("\n");
+}
+
 export function formatPingTable(
   results: PingResult[],
   opts: TableOpts = {},
@@ -96,7 +105,7 @@ export function formatPingTable(
 
   const roundCount = results[0]?.rounds.length ?? 0;
   const lines: string[] = [];
-  lines.push(bold(`Connectivity Test (median of ${roundCount} rounds)`, opts));
+  lines.push(bold(`🏓 Connectivity Test (median of ${roundCount} rounds)`, opts));
   lines.push("━".repeat(50));
   lines.push(padRow3(["Target", "Tag", "Latency"]));
   lines.push("─".repeat(50));

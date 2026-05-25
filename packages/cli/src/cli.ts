@@ -12,7 +12,7 @@ import type { Endpoint } from "./config/types.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
-import { formatPingTable, formatProbeTable } from "./output/table.js";
+import { formatIpSummaryTable, formatPingTable, formatProbeTable } from "./output/table.js";
 import type { FullOutput, IpDetail, ProbeEntry } from "./output/types.js";
 import { probeWithFallback } from "./probes/fallback.js";
 import { probeHttpHeader } from "./probes/http-header.js";
@@ -404,7 +404,10 @@ async function handleRun(
       ...(ipDetails ? { ipDetails } : {}),
     };
     process.stdout.write(`${formatJson(output)}\n`);
-  } else if (!useLiveTui) {
+  } else if (useLiveTui) {
+    const ipTable = formatIpSummaryTable(uniqueIps);
+    if (ipTable) process.stdout.write(`\n${ipTable}\n`);
+  } else {
     if (pingResults) {
       process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
     }
