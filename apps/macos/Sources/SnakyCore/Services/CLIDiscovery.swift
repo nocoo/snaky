@@ -1,7 +1,7 @@
 import Foundation
 
 public protocol FileExistenceChecker: Sendable {
-    func fileExists(atPath path: String) -> Bool
+    func isExecutableFile(atPath path: String) -> Bool
 }
 
 public protocol ShellExecutor: Sendable {
@@ -11,8 +11,8 @@ public protocol ShellExecutor: Sendable {
 public struct DefaultFileChecker: FileExistenceChecker {
     public init() {}
 
-    public func fileExists(atPath path: String) -> Bool {
-        FileManager.default.fileExists(atPath: path)
+    public func isExecutableFile(atPath path: String) -> Bool {
+        FileManager.default.isExecutableFile(atPath: path)
     }
 }
 
@@ -78,19 +78,19 @@ public struct CLIDiscovery: Sendable {
 
     public func discover() async -> String? {
         if let configured = configuredPath() {
-            if fileChecker.fileExists(atPath: configured) {
+            if fileChecker.isExecutableFile(atPath: configured) {
                 return configured
             }
         }
 
-        for path in Self.wellKnownPaths where fileChecker.fileExists(atPath: path) {
+        for path in Self.wellKnownPaths where fileChecker.isExecutableFile(atPath: path) {
             return path
         }
 
         if let shellPath = try? await shellExecutor.execute(
             command: "which snaky",
             timeout: .seconds(3)
-        ), !shellPath.isEmpty, fileChecker.fileExists(atPath: shellPath) {
+        ), !shellPath.isEmpty, fileChecker.isExecutableFile(atPath: shellPath) {
             return shellPath
         }
 

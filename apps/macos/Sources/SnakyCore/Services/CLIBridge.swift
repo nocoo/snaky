@@ -58,9 +58,7 @@ public struct DefaultProcessExecutor: ProcessExecutor {
 
                 group.addTask {
                     try await Task.sleep(for: timeout)
-                    if process.isRunning {
-                        kill(process.processIdentifier, SIGKILL)
-                    }
+                    Self.gracefulKill(process)
                     return nil
                 }
 
@@ -73,12 +71,17 @@ public struct DefaultProcessExecutor: ProcessExecutor {
                 return output
             }
         } onCancel: {
-            process.terminate()
-            let pid = process.processIdentifier
-            DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
-                if process.isRunning {
-                    kill(pid, SIGKILL)
-                }
+            Self.gracefulKill(process)
+        }
+    }
+
+    private static func gracefulKill(_ process: Process) {
+        guard process.isRunning else { return }
+        process.terminate()
+        let pid = process.processIdentifier
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+            if process.isRunning {
+                kill(pid, SIGKILL)
             }
         }
     }
@@ -117,7 +120,7 @@ public struct CLIBridge: Sendable {
         } catch let error as CLIError {
             throw error
         } catch {
-            throw CLIError.timeout
+            throw CLIError.fatal("Failed to launch CLI: \(error.localizedDescription)")
         }
 
         switch output.exitCode {

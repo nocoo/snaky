@@ -108,7 +108,7 @@ struct ErrorStateTests {
 
 private struct FakeFileChecker: FileExistenceChecker {
     let existingPaths: Set<String>
-    func fileExists(atPath path: String) -> Bool { existingPaths.contains(path) }
+    func isExecutableFile(atPath path: String) -> Bool { existingPaths.contains(path) }
 }
 
 private struct FakeShellExecutor: ShellExecutor {

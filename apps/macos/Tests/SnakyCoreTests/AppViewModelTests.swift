@@ -136,7 +136,7 @@ struct AppViewModelTests {
 
 private struct TestFileChecker: FileExistenceChecker {
     let existingPaths: Set<String>
-    func fileExists(atPath path: String) -> Bool { existingPaths.contains(path) }
+    func isExecutableFile(atPath path: String) -> Bool { existingPaths.contains(path) }
 }
 
 private struct TestShellExecutor: ShellExecutor {

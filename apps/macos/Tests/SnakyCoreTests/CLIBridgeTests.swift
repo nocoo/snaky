@@ -66,7 +66,7 @@ struct CLIBridgeTests {
 
     private struct MockFileChecker: FileExistenceChecker {
         let existingPaths: Set<String>
-        func fileExists(atPath path: String) -> Bool { existingPaths.contains(path) }
+        func isExecutableFile(atPath path: String) -> Bool { existingPaths.contains(path) }
     }
 
     private struct MockShellExecutor: ShellExecutor {

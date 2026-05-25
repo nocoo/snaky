@@ -8,7 +8,7 @@ struct CLIDiscoveryTests {
 
     struct MockFileChecker: FileExistenceChecker {
         let existingPaths: Set<String>
-        func fileExists(atPath path: String) -> Bool { existingPaths.contains(path) }
+        func isExecutableFile(atPath path: String) -> Bool { existingPaths.contains(path) }
     }
 
     struct MockShellExecutor: ShellExecutor {
