@@ -13,7 +13,7 @@ final class StatusItemController {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 620),
+            contentRect: NSRect(x: 0, y: 0, width: 451, height: 818),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: true

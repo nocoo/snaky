@@ -8,63 +8,60 @@ public struct PopoverContentView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                headerRow
-                switch viewModel.state {
-                case .idle:
-                    ContentUnavailableView("Ready", systemImage: "network", description: Text("Open to refresh"))
-                case .loading:
-                    loadingView
-                case .success(let output):
-                    successView(output)
-                case .error(let error):
-                    if error == .notFound {
-                        SetupView(onBrowse: { viewModel.selectCLIPath() }, onRedetect: { viewModel.refresh() })
-                    } else {
-                        errorBanner(error)
-                        if let previous = viewModel.previousResult {
-                            successView(previous)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    headerRow
+                    switch viewModel.state {
+                    case .idle:
+                        ContentUnavailableView("Ready", systemImage: "network", description: Text("Open to refresh"))
+                    case .loading:
+                        loadingView
+                    case .success(let output):
+                        successView(output)
+                    case .error(let error):
+                        if error == .notFound {
+                            SetupView(onBrowse: { viewModel.selectCLIPath() }, onRedetect: { viewModel.refresh() })
+                        } else {
+                            errorBanner(error)
+                            if let previous = viewModel.previousResult {
+                                successView(previous)
+                            }
                         }
                     }
                 }
+                .padding(16)
             }
-            .padding(16)
-            .padding(.bottom, 40)
+
+            if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {
+                Rectangle()
+                    .fill(Theme.cardBorder)
+                    .frame(height: 1)
+                HStack {
+                    if let status = viewModel.statusMessage {
+                        Text(status)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.secondaryText)
+                    } else if let date = viewModel.lastUpdated {
+                        Text("Updated \(date, style: .relative) ago")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.tertiaryText)
+                    }
+                    Spacer()
+                    if let version = viewModel.cliVersion {
+                        Text("snaky v\(version)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.tertiaryText)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
         }
-        .frame(width: 380, height: 620)
+        .frame(width: 451, height: 818)
         .background(Theme.panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear { viewModel.refresh() }
-        .safeAreaInset(edge: .bottom) {
-            if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Theme.cardBorder)
-                        .frame(height: 1)
-                    HStack {
-                        if let status = viewModel.statusMessage {
-                            Text(status)
-                                .font(.system(size: 10))
-                                .foregroundStyle(Theme.secondaryText)
-                        } else if let date = viewModel.lastUpdated {
-                            Text("Updated \(date, style: .relative) ago")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Theme.tertiaryText)
-                        }
-                        Spacer()
-                        if let version = viewModel.cliVersion {
-                            Text("snaky v\(version)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Theme.tertiaryText)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Theme.panelBackground)
-                }
-            }
-        }
     }
 
     private var headerRow: some View {
