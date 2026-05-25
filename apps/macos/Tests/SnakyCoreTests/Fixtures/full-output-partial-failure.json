@@ -1,0 +1,75 @@
+{
+  "mode": "all",
+  "probe": {
+    "results": [
+      {
+        "name": "anthropic",
+        "category": "ai",
+        "method": "cftrace",
+        "target": "anthropic.com",
+        "usedFallback": false,
+        "ok": true,
+        "ip": "104.18.32.7",
+        "location": "JP",
+        "colo": "NRT",
+        "responseTimeMs": 45
+      },
+      {
+        "name": "qualcomm-cn",
+        "category": "domestic",
+        "method": "cftrace",
+        "target": "www.qualcomm.cn",
+        "usedFallback": false,
+        "ok": false,
+        "responseTimeMs": null,
+        "error": {
+          "code": "DNS_FAILED",
+          "message": "getaddrinfo ENOTFOUND www.qualcomm.cn"
+        }
+      },
+      {
+        "name": "timeout-ep",
+        "category": "ai",
+        "method": "cftrace",
+        "target": "slow.example.com",
+        "usedFallback": false,
+        "ok": false,
+        "responseTimeMs": 5000,
+        "error": {
+          "code": "TIMEOUT",
+          "message": "Request timed out after 5000ms"
+        }
+      }
+    ],
+    "summary": {
+      "total": 3,
+      "succeeded": 1,
+      "failed": 2
+    },
+    "uniqueIps": [
+      { "ip": "104.18.32.7", "location": "JP", "count": 1 }
+    ]
+  },
+  "ping": {
+    "results": [
+      {
+        "name": "ping-broken",
+        "tag": "domestic",
+        "ok": false,
+        "medianMs": null,
+        "rounds": [-1, -1, -1, -1, -1],
+        "error": {
+          "code": "ALL_FAILED",
+          "message": "All 5 rounds failed"
+        }
+      },
+      {
+        "name": "ping-partial",
+        "tag": "international",
+        "ok": true,
+        "medianMs": 120,
+        "rounds": [130, -1, 120, -1, 110]
+      }
+    ]
+  }
+}

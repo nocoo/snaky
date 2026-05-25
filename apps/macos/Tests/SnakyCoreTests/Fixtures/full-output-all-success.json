@@ -1,0 +1,51 @@
+{
+  "mode": "all",
+  "probe": {
+    "results": [
+      {
+        "name": "anthropic",
+        "category": "ai",
+        "method": "cftrace",
+        "target": "anthropic.com",
+        "usedFallback": false,
+        "ok": true,
+        "ip": "104.18.32.7",
+        "location": "JP",
+        "colo": "NRT",
+        "responseTimeMs": 45
+      },
+      {
+        "name": "netease",
+        "category": "domestic",
+        "method": "http-header",
+        "target": "https://necaptcha.nosdn.127.net/check.png",
+        "usedFallback": false,
+        "ok": true,
+        "ip": "167.220.233.44",
+        "location": null,
+        "colo": null,
+        "responseTimeMs": 120
+      }
+    ],
+    "summary": {
+      "total": 2,
+      "succeeded": 2,
+      "failed": 0
+    },
+    "uniqueIps": [
+      { "ip": "104.18.32.7", "location": "JP", "count": 1 },
+      { "ip": "167.220.233.44", "location": null, "count": 1 }
+    ]
+  },
+  "ping": {
+    "results": [
+      {
+        "name": "ping-cloudflare",
+        "tag": "international",
+        "ok": true,
+        "medianMs": 52,
+        "rounds": [60, 52, 51, 53, 50]
+      }
+    ]
+  }
+}

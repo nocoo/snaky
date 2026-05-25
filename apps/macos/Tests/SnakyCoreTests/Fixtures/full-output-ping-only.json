@@ -1,0 +1,22 @@
+{
+  "mode": "ping",
+  "probe": null,
+  "ping": {
+    "results": [
+      {
+        "name": "ping-github",
+        "tag": "international",
+        "ok": true,
+        "medianMs": 114,
+        "rounds": [140, 121, 60, 115, 113]
+      },
+      {
+        "name": "ping-wechat",
+        "tag": "domestic",
+        "ok": true,
+        "medianMs": 61,
+        "rounds": [142, 60, 59, 61, 58]
+      }
+    ]
+  }
+}

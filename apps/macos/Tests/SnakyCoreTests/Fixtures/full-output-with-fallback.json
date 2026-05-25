@@ -1,0 +1,29 @@
+{
+  "mode": "probe",
+  "probe": {
+    "results": [
+      {
+        "name": "chatgpt",
+        "category": "ai",
+        "method": "cftrace",
+        "target": "chatgpt.com",
+        "usedFallback": true,
+        "resolvedTarget": "chatgpt.com.cdn.cloudflare.net",
+        "ok": true,
+        "ip": "104.18.32.7",
+        "location": "JP",
+        "colo": "NRT",
+        "responseTimeMs": 95
+      }
+    ],
+    "summary": {
+      "total": 1,
+      "succeeded": 1,
+      "failed": 0
+    },
+    "uniqueIps": [
+      { "ip": "104.18.32.7", "location": "JP", "count": 1 }
+    ]
+  },
+  "ping": null
+}

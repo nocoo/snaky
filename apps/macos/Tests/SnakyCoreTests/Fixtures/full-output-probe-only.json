@@ -1,0 +1,28 @@
+{
+  "mode": "probe",
+  "probe": {
+    "results": [
+      {
+        "name": "chatgpt",
+        "category": "ai",
+        "method": "cftrace",
+        "target": "chatgpt.com",
+        "usedFallback": false,
+        "ok": true,
+        "ip": "104.18.32.7",
+        "location": "US",
+        "colo": "LAX",
+        "responseTimeMs": 180
+      }
+    ],
+    "summary": {
+      "total": 1,
+      "succeeded": 1,
+      "failed": 0
+    },
+    "uniqueIps": [
+      { "ip": "104.18.32.7", "location": "US", "count": 1 }
+    ]
+  },
+  "ping": null
+}
