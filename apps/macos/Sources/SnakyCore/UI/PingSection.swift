@@ -4,14 +4,15 @@ struct PingSection: View {
     let results: [PingResult]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Ping")
-                .font(.headline)
-                .padding(.bottom, 2)
-            ForEach(results, id: \.name) { result in
-                PingRow(model: PingRowModel(from: result))
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(icon: "waveform.path", title: "Ping", badge: "\(results.count)")
+            VStack(spacing: 2) {
+                ForEach(results, id: \.name) { result in
+                    PingRow(model: PingRowModel(from: result))
+                }
             }
         }
+        .card()
     }
 }
 
@@ -19,32 +20,33 @@ private struct PingRow: View {
     let model: PingRowModel
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: model.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundStyle(model.isSuccess ? .green : .red)
-                .font(.caption)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(model.isSuccess ? Color.green : Color.red)
+                .frame(width: 7, height: 7)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
                     Text(model.name)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
-                    Text(model.tag)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    Badge(text: model.tag)
                 }
                 HStack(spacing: 2) {
                     ForEach(Array(model.dots.enumerated()), id: \.offset) { _, dot in
-                        Circle()
-                            .fill(dot.isSuccess ? Color.green : Color.red)
-                            .frame(width: 5, height: 5)
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(dot.isSuccess ? Color.green.opacity(0.8) : Color.red.opacity(0.6))
+                            .frame(width: 4, height: dot.isSuccess ? CGFloat(min(max(dot.ms / 30.0, 0.3), 1.0)) * 10 : 3)
                     }
                 }
+                .frame(height: 10, alignment: .bottom)
             }
             Spacer()
             Text(model.medianText)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(model.latencyColor.color)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 5)
     }
 }
