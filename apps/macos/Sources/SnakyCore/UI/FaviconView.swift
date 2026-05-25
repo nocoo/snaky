@@ -5,11 +5,7 @@ struct FaviconView: View {
     let isSuccess: Bool
 
     var body: some View {
-        if let url = Bundle.module.url(
-            forResource: name,
-            withExtension: "webp",
-            subdirectory: "Resources/favicons"
-        ), let nsImage = NSImage(contentsOf: url) {
+        if let nsImage = loadFavicon() {
             Image(nsImage: nsImage)
                 .resizable()
                 .interpolation(.high)
@@ -21,5 +17,18 @@ struct FaviconView: View {
                 .fill(isSuccess ? Color.green : Color.red)
                 .frame(width: 7, height: 7)
         }
+    }
+
+    private func loadFavicon() -> NSImage? {
+        for ext in ["webp", "png"] {
+            if let url = Bundle.module.url(
+                forResource: name,
+                withExtension: ext,
+                subdirectory: "Resources/favicons"
+            ), let image = NSImage(contentsOf: url) {
+                return image
+            }
+        }
+        return nil
     }
 }
