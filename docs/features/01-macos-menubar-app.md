@@ -126,8 +126,7 @@ Fixed-size panel (~360x600) with SwiftUI content:
 - Partial success: `ok: true` with some rounds failed
 
 #### Controls
-- Refresh button (triggers new CLI invocation)
-- Loading spinner during fetch (button disabled)
+- Refresh button (triggers new CLI invocation); during fetch shows spinner and changes label to "Cancel" (remains interactive)
 - Last-updated timestamp
 - Error state display (CLI not found / timed out / crashed / exit code 3)
 
