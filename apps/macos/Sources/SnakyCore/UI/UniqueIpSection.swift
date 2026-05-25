@@ -4,22 +4,24 @@ struct UniqueIpSection: View {
     let ips: [UniqueIp]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("IP Summary")
-                .font(.headline)
-                .padding(.bottom, 2)
-            ForEach(ips, id: \.ip) { entry in
-                HStack {
-                    Text(flagEmoji(for: entry.location))
-                        .font(.body)
-                    Text(entry.ip)
-                        .font(.system(.body, design: .monospaced))
-                    Spacer()
-                    Text("×\(entry.count)")
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(icon: "globe", title: "IP Summary", badge: "\(ips.count) IPs")
+            VStack(spacing: 6) {
+                ForEach(ips, id: \.ip) { entry in
+                    HStack(spacing: 8) {
+                        Text(flagEmoji(for: entry.location))
+                            .font(.system(size: 14))
+                        Text(entry.ip)
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Theme.primaryText)
+                        Spacer()
+                        Badge(text: "×\(entry.count)")
+                    }
+                    .padding(.vertical, 2)
                 }
             }
         }
+        .card()
     }
 
     private func flagEmoji(for location: String?) -> String {
