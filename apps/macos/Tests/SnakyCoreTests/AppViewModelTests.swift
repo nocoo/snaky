@@ -101,7 +101,6 @@ struct AppViewModelTests {
 
     @Test func refreshAfterSuccess() async throws {
         let output1 = Self.makeOutput(mode: .all)
-        let output2 = Self.makeOutput(mode: .probe)
         let (bridge1, _) = Self.makeBridge(result: .success(output1))
         let vm = AppViewModel(bridge: bridge1)
 
@@ -109,6 +108,7 @@ struct AppViewModelTests {
         try await Task.sleep(for: .milliseconds(50))
         #expect(vm.state == .success(output1))
 
+        let output2 = Self.makeOutput(mode: .all)
         let (bridge2, _) = Self.makeBridge(result: .success(output2))
         let vm2 = AppViewModel(bridge: bridge2)
         vm2.refresh()

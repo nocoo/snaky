@@ -18,6 +18,11 @@ public final class AppViewModel: ObservableObject {
         case error(CLIError)
     }
 
+    private enum PartialResult: Sendable {
+        case ping(Result<FullOutput, CLIError>)
+        case probe(Result<FullOutput, CLIError>)
+    }
+
     private var currentTask: Task<Void, Never>?
 
     public init(bridge: CLIBridge) {
@@ -32,23 +37,68 @@ public final class AppViewModel: ObservableObject {
             if cliVersion == nil {
                 cliVersion = await bridge.fetchVersion()
             }
-            do {
-                let output = try await bridge.invoke()
+            await fetchParallel()
+        }
+    }
+
+    private func fetchParallel() async {
+        await withTaskGroup(of: PartialResult.self) { group in
+            group.addTask { await self.fetchPing() }
+            group.addTask { await self.fetchProbe() }
+
+            var ping: PingOutput?
+            var probe: ProbeOutput?
+            var pingError: CLIError?
+            var probeError: CLIError?
+
+            for await partial in group {
                 guard !Task.isCancelled else { return }
-                previousResult = output
-                lastUpdated = Date()
-                state = .success(output)
-            } catch let error as CLIError {
-                guard !Task.isCancelled else { return }
-                if error == .timeout {
-                    statusMessage = "Timed out"
+                switch partial {
+                case .ping(.success(let output)):
+                    ping = output.ping
+                case .ping(.failure(let error)):
+                    pingError = error
+                case .probe(.success(let output)):
+                    probe = output.probe
+                case .probe(.failure(let error)):
+                    probeError = error
                 }
-                state = .error(error)
-            } catch {
-                guard !Task.isCancelled else { return }
-                statusMessage = "Timed out"
-                state = .error(.timeout)
+
+                if ping != nil || probe != nil {
+                    let merged = FullOutput(mode: .all, probe: probe, ping: ping)
+                    previousResult = merged
+                    lastUpdated = Date()
+                    state = .success(merged)
+                }
             }
+
+            guard !Task.isCancelled else { return }
+
+            if ping == nil && probe == nil {
+                let error = pingError ?? probeError ?? .timeout
+                if error == .timeout { statusMessage = "Timed out" }
+                state = .error(error)
+            }
+        }
+    }
+
+    private nonisolated func fetchPing() async -> PartialResult {
+        do {
+            return .ping(.success(try await bridge.invoke(mode: "ping")))
+        } catch let error as CLIError {
+            return .ping(.failure(error))
+        } catch {
+            return .ping(.failure(.timeout))
+        }
+    }
+
+    private nonisolated func fetchProbe() async -> PartialResult {
+        do {
+            return .probe(.success(try await bridge.invoke(mode: "probe")))
+        } catch let error as CLIError {
+            return .probe(.failure(error))
+        } catch {
+            return .probe(.failure(.timeout))
         }
     }
 
