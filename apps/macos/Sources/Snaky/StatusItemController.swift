@@ -5,35 +5,78 @@ import SwiftUI
 @MainActor
 final class StatusItemController {
     private let statusItem: NSStatusItem
-    private let popover: NSPopover
+    private let panel: NSPanel
     private let viewModel = AppViewModel(bridge: CLIBridge())
+    private var eventMonitor: Any?
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 360, height: 600)
-        popover.behavior = .transient
 
-        popover.contentViewController = NSHostingController(
-            rootView: PopoverContentView(viewModel: viewModel)
+        panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 620),
+            styleMask: [.nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: true
         )
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.hasShadow = true
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isMovableByWindowBackground = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        let hostingView = NSHostingView(
+            rootView: PopoverContentView(viewModel: viewModel)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        )
+        panel.contentView = hostingView
 
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
-            button.action = #selector(togglePopover)
+            button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
     }
 
-    @objc private func togglePopover(_ sender: NSStatusBarButton) {
+    @objc private func togglePanel(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         if event?.type == .rightMouseUp {
             showContextMenu(sender)
-        } else if popover.isShown {
-            popover.performClose(sender)
+        } else if panel.isVisible {
+            hidePanel()
         } else {
-            popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            showPanel(sender)
+        }
+    }
+
+    private func showPanel(_ sender: NSStatusBarButton) {
+        guard let buttonWindow = sender.window else { return }
+        let buttonFrame = buttonWindow.frame
+        let panelWidth = panel.frame.width
+        let panelHeight = panel.frame.height
+
+        let originX = buttonFrame.midX - panelWidth / 2
+        let originY = buttonFrame.minY - panelHeight - 4
+
+        panel.setFrameOrigin(NSPoint(x: originX, y: originY))
+        panel.makeKeyAndOrderFront(nil)
+
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            self?.hidePanel()
+        }
+    }
+
+    private func hidePanel() {
+        panel.orderOut(nil)
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
         }
     }
 

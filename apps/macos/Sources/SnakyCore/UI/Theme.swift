@@ -50,7 +50,6 @@ struct Badge: View {
 struct SectionHeader: View {
     let icon: String
     let title: String
-    var badge: String?
 
     var body: some View {
         HStack(spacing: 6) {
@@ -61,9 +60,6 @@ struct SectionHeader: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.sectionTitle)
             Spacer()
-            if let badge {
-                Badge(text: badge)
-            }
         }
     }
 }

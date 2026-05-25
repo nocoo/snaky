@@ -5,7 +5,7 @@ struct ProbeSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(icon: "arrow.triangle.branch", title: "Probes", badge: "\(entries.count)")
+            SectionHeader(icon: "arrow.triangle.branch", title: "Probes")
             VStack(spacing: 2) {
                 ForEach(entries, id: \.name) { entry in
                     ProbeRow(model: ProbeRowModel(from: entry))

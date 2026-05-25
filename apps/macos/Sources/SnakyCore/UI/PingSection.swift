@@ -5,7 +5,7 @@ struct PingSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(icon: "waveform.path", title: "Ping", badge: "\(results.count)")
+            SectionHeader(icon: "waveform.path", title: "Ping")
             VStack(spacing: 2) {
                 ForEach(results, id: \.name) { result in
                     PingRow(model: PingRowModel(from: result))

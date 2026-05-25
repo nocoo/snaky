@@ -32,9 +32,9 @@ public struct PopoverContentView: View {
             .padding(16)
             .padding(.bottom, 40)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
         .frame(width: 380, height: 620)
         .background(Theme.panelBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear { viewModel.refresh() }
         .safeAreaInset(edge: .bottom) {
             if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {

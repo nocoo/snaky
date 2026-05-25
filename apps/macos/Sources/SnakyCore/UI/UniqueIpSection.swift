@@ -5,7 +5,7 @@ struct UniqueIpSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(icon: "globe", title: "IP Summary", badge: "\(ips.count) IPs")
+            SectionHeader(icon: "globe", title: "IP Summary")
             VStack(spacing: 6) {
                 ForEach(ips, id: \.ip) { entry in
                     HStack(spacing: 8) {
@@ -15,7 +15,6 @@ struct UniqueIpSection: View {
                             .font(.system(size: 12, weight: .medium, design: .monospaced))
                             .foregroundStyle(Theme.primaryText)
                         Spacer()
-                        Badge(text: "×\(entry.count)")
                     }
                     .padding(.vertical, 2)
                 }

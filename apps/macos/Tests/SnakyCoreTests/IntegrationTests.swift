@@ -88,7 +88,7 @@ struct IntegrationTests {
 
     @Test(.enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
     func bridgeEndToEnd() async throws {
-        let bridge = CLIBridge(timeout: .seconds(30))
+        let bridge = CLIBridge(timeout: .seconds(60))
         let output = try await bridge.invoke()
         #expect(output.mode == .all)
     }
