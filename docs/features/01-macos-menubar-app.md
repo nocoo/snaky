@@ -33,10 +33,10 @@ Build a native macOS menu bar (status bar) app that visualizes Snaky CLI output.
 |-------|-----------|
 | App shell | AppKit (NSApplication, NSStatusItem, NSPopover) |
 | UI | SwiftUI |
-| Build system | Xcode project (`Snaky.xcodeproj`) |
+| Build system | Swift Package Manager (`Package.swift`) |
 | CLI communication | Foundation.Process → `snaky --json` |
 | Target | macOS 14+ (Sonoma), Apple Silicon + Intel |
-| Swift | Swift 5.9+ |
+| Swift | Swift 6.0 |
 
 ### Key Decisions
 
@@ -242,32 +242,32 @@ struct PingResult: Decodable {
 
 ```
 apps/macos/
-├── Snaky.xcodeproj
-├── Snaky/                  # App shell (thin)
-│   ├── SnakyApp.swift      # Entry point, AppDelegate
-│   ├── StatusItem.swift    # NSStatusItem + NSPopover wiring
-│   └── Info.plist
-├── SnakyCore/              # Testable library
-│   ├── Models/             # Decodable structs (above)
-│   ├── Services/
-│   │   ├── CLIBridge.swift # Process spawning, discovery, timeout
-│   │   └── CLIDiscovery.swift
-│   ├── ViewModels/
-│   │   └── AppViewModel.swift
-│   └── UI/                 # SwiftUI views
-│       ├── PopoverContentView.swift
-│       ├── UniqueIpSection.swift
-│       ├── ProbeSection.swift
-│       ├── PingSection.swift
-│       ├── SetupView.swift
-│       └── Components/
-├── SnakyCoreTests/
-│   ├── ModelDecodingTests.swift
-│   ├── CLIBridgeTests.swift
-│   └── Fixtures/           # JSON fixtures maintained here, manually synced from CLI schema
-└── scripts/
-    ├── build.sh
-    └── package-dmg.sh
+├── Package.swift
+├── Sources/
+│   ├── Snaky/                  # App shell (thin)
+│   │   ├── SnakyApp.swift      # Entry point
+│   │   ├── AppDelegate.swift   # NSApplication lifecycle
+│   │   └── StatusItemController.swift
+│   └── SnakyCore/              # Testable library
+│       ├── Models/             # Decodable structs (above)
+│       ├── Services/
+│       │   ├── CLIBridge.swift # Process spawning, discovery, timeout
+│       │   └── CLIDiscovery.swift
+│       ├── ViewModels/
+│       │   └── AppViewModel.swift
+│       └── UI/                 # SwiftUI views
+│           ├── PopoverContentView.swift
+│           ├── UniqueIpSection.swift
+│           ├── ProbeSection.swift
+│           ├── PingSection.swift
+│           ├── SetupView.swift
+│           └── Components/
+├── Tests/
+│   └── SnakyCoreTests/
+│       ├── ModelDecodingTests.swift
+│       ├── CLIBridgeTests.swift
+│       └── Fixtures/           # JSON fixtures maintained here, manually synced from CLI schema
+└── .swiftlint.yml
 ```
 
 ---
@@ -275,22 +275,23 @@ apps/macos/
 ## Build & Development
 
 ```bash
-# Build macOS app (Xcode)
+# Build macOS app (SPM)
 cd apps/macos
-xcodebuild -scheme Snaky -configuration Debug -derivedDataPath Build build
+swift build
 
-# Run in debug (Xcode)
-open Snaky.xcodeproj  # Cmd+R in Xcode
+# Run tests
+swift test
 
-# Or via command line after build
-./Build/Build/Products/Debug/Snaky.app/Contents/MacOS/Snaky
+# Build with warnings-as-errors
+swift build -Xswiftc -warnings-as-errors
 
-# Package for distribution
-./scripts/build.sh
-./scripts/package-dmg.sh
+# Run after build
+.build/debug/Snaky
 ```
 
 **Prerequisite**: `snaky` CLI must be installed separately (`npm install -g @nocoo/snaky`). The app discovers it at runtime — it is never bundled.
+
+**Packaging**: DMG/distribution packaging is future work (not yet scripted).
 
 ---
 
@@ -313,9 +314,9 @@ open Snaky.xcodeproj  # Cmd+R in Xcode
 
 | Layer | Content | Trigger | Tool |
 |-------|---------|---------|------|
-| L1 Unit | Model decoding, CLIBridge parsing, ViewModel state, discovery logic | pre-commit (<30s) | XCTest |
-| G1 Static | `xcodebuild` (warnings-as-errors, strict concurrency) + swiftlint --strict | pre-commit | xcodebuild + swiftlint |
-| L2 Integration | CLIBridge spawns real `snaky` process, verifies JSON decode end-to-end | pre-push (<60s) | XCTest |
+| L1 Unit | Model decoding, CLIBridge parsing, ViewModel state, discovery logic | pre-commit (<30s) | Swift Testing |
+| G1 Static | `swift build -Xswiftc -warnings-as-errors` (strict concurrency) + swiftlint --strict | pre-commit | SPM + swiftlint |
+| L2 Integration | CLIBridge spawns real `snaky` process, verifies JSON decode end-to-end | pre-push (<60s) | Swift Testing |
 
 ### Key Test Scenarios
 
@@ -364,19 +365,19 @@ open Snaky.xcodeproj  # Cmd+R in Xcode
 
 ## Atomic Commit Plan
 
-Each step = one atomic commit. TDD: tests written before or alongside implementation. Every commit must pass `xcodebuild` (warnings-as-errors) + swiftlint --strict.
+Each step = one atomic commit. TDD: tests written before or alongside implementation. Every commit must pass `swift build -Xswiftc -warnings-as-errors` + swiftlint --strict.
 
 ---
 
-### Step 1 — `chore: init apps/macos/ Xcode project skeleton`
+### Step 1 — `chore: init apps/macos/ SPM package skeleton`
 
-- Create `apps/macos/Snaky.xcodeproj` with 3 targets:
-  - `Snaky` (app, menu bar agent)
-  - `SnakyCore` (framework, all testable logic)
-  - `SnakyCoreTests` (unit test bundle)
-- Configure build settings: `SWIFT_STRICT_CONCURRENCY=complete`, `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES`
+- Create `apps/macos/Package.swift` with 3 targets:
+  - `Snaky` (executableTarget, menu bar agent)
+  - `SnakyCore` (library, all testable logic)
+  - `SnakyCoreTests` (testTarget)
+- Configure `Package.swift`: `.enableExperimentalFeature("StrictConcurrency")`
 - Add `.swiftlint.yml` with strict rules, 0 tolerance
-- Verify: `xcodebuild -scheme Snaky build` succeeds with 0 warnings
+- Verify: `swift build` succeeds with 0 warnings
 
 ---
 
@@ -516,7 +517,7 @@ Each step = one atomic commit. TDD: tests written before or alongside implementa
 
 ### Step 10 — `test: integration test with real CLI`
 
-- Requires `snaky` installed (skipped in CI if not available via `XCTSkipIf`)
+- Requires `snaky` installed (skipped via `.enabled(if:)` trait if not available)
 - Spawns real `snaky --json --timeout 3000` with short timeout
 - Verifies: stdout parses into `FullOutput`, mode == .all, probe/ping both non-nil
 - Verifies: `snaky --version` returns parseable semver string
@@ -528,7 +529,7 @@ Each step = one atomic commit. TDD: tests written before or alongside implementa
 | Gate | Requirement | Enforced at |
 |------|-------------|-------------|
 | L1 Coverage | ≥ 95% line on SnakyCore | Every commit |
-| G1 Compiler | 0 warnings (`-warnings-as-errors`) | Every commit |
+| G1 Compiler | 0 warnings (`swift build -Xswiftc -warnings-as-errors`) | Every commit |
 | G1 SwiftLint | 0 violations (`--strict`) | Every commit |
 | G1 Concurrency | `SWIFT_STRICT_CONCURRENCY=complete` | Every commit |
 | L2 Integration | Real CLI round-trip | pre-push |
