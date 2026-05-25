@@ -20,7 +20,7 @@ struct FaviconView: View {
     }
 
     private func loadFavicon() -> NSImage? {
-        for ext in ["webp", "png"] {
+        for ext in ["webp", "png", "jpg"] {
             if let url = Bundle.module.url(
                 forResource: name,
                 withExtension: ext,

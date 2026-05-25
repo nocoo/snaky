@@ -26,9 +26,8 @@ private struct PingCell: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            tagIcon
-                .font(.system(size: 12))
-                .frame(width: 16)
+            FaviconView(name: model.name, isSuccess: model.isSuccess)
+                .frame(width: 16, height: 16)
             Text(displayName)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.primaryText)
@@ -46,15 +45,5 @@ private struct PingCell: View {
 
     private var displayName: String {
         model.name.hasPrefix("ping-") ? String(model.name.dropFirst(5)) : model.name
-    }
-
-    @ViewBuilder
-    private var tagIcon: some View {
-        if model.tag == "domestic" {
-            Text("🇨🇳")
-        } else {
-            Image(systemName: "globe")
-                .foregroundStyle(Theme.secondaryText)
-        }
     }
 }
