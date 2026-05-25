@@ -19,7 +19,9 @@ export async function runProbes(
   async function worker(): Promise<void> {
     while (nextIdx < endpoints.length) {
       const idx = nextIdx++;
-      const result = await opts.probeFn(endpoints[idx]!);
+      const endpoint = endpoints[idx];
+      if (!endpoint) continue;
+      const result = await opts.probeFn(endpoint);
       results[idx] = result;
       opts.onResult?.(idx, result);
     }

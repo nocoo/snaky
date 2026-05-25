@@ -57,6 +57,6 @@ export function normalizeDomain(input: string): NormalizeResult {
   }
 
   // Strip trailing slashes and paths
-  const domain = trimmed.split("/")[0]!;
+  const domain = trimmed.split("/")[0] ?? "";
   return { ok: true, domain };
 }

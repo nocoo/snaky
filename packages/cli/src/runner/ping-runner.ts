@@ -32,12 +32,13 @@ export async function runPing(
   for (let round = 0; round < opts.rounds; round++) {
     const results = await runRound(targets, opts);
     for (let i = 0; i < targets.length; i++) {
-      roundResults[i]?.push(results[i]!);
+      const roundMs = results[i] ?? -1;
+      roundResults[i]?.push(roundMs);
     }
   }
 
   const finalResults = targets.map((target, i) => {
-    const rounds = roundResults[i]!;
+    const rounds = roundResults[i] ?? [];
     const successful = rounds.filter((r) => r >= 0).sort((a, b) => a - b);
 
     if (successful.length === 0) {
@@ -64,7 +65,8 @@ export async function runPing(
   });
 
   for (let i = 0; i < finalResults.length; i++) {
-    opts.onResult?.(i, finalResults[i]!);
+    const result = finalResults[i];
+    if (result) opts.onResult?.(i, result);
   }
 
   return finalResults;
@@ -83,7 +85,7 @@ async function runRound(
 function median(sorted: number[]): number {
   const mid = Math.floor(sorted.length / 2);
   if (sorted.length % 2 === 0) {
-    return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
+    return Math.round(((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2);
   }
-  return sorted[mid]!;
+  return sorted[mid] ?? 0;
 }

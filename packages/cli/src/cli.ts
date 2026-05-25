@@ -141,8 +141,8 @@ function handleAdd(command: AddCommand, configPath: string): number {
     const result = addEndpoint(configPath, {
       name: command.name,
       method: "http-header",
-      url: command.url!,
-      headers: command.headers!,
+      url: command.url ?? "",
+      headers: command.headers ?? [],
     });
     if (!result.ok) {
       process.stderr.write(`Error: ${result.error}\n`);
@@ -152,7 +152,7 @@ function handleAdd(command: AddCommand, configPath: string): number {
     const result = addEndpoint(configPath, {
       name: command.name,
       method: "http-ping",
-      url: command.url!,
+      url: command.url ?? "",
     });
     if (!result.ok) {
       process.stderr.write(`Error: ${result.error}\n`);
@@ -264,7 +264,7 @@ async function handleRun(
   }
 
   const buildProbeEntry = (ep: Endpoint, r: ProbeResult): ProbeEntry => {
-    const meta = fallbackMeta.get(ep.name)!;
+    const meta = fallbackMeta.get(ep.name) ?? { usedFallback: false };
     const base = {
       name: ep.name,
       category: ep.category,
@@ -319,8 +319,11 @@ async function handleRun(
           probeFn,
           onResult(index, result) {
             if (liveCallbacks) {
-              const entry = buildProbeEntry(endpoints[index]!, result);
-              liveCallbacks.setProbeResult(index, entry);
+              const ep = endpoints[index];
+              if (ep) {
+                const entry = buildProbeEntry(ep, result);
+                liveCallbacks.setProbeResult(index, entry);
+              }
             }
           },
         });
@@ -334,7 +337,7 @@ async function handleRun(
         concurrency,
         pingFn: (url, opts) => probeHttpPing(url, opts),
         onResult: liveCallbacks
-          ? (index, result) => { liveCallbacks!.setPingResult(index, result); }
+          ? (index, result) => { liveCallbacks?.setPingResult(index, result); }
           : undefined,
       })
     : null;
@@ -353,7 +356,11 @@ async function handleRun(
   }
 
   if (probeResults) {
-    probeEntries = endpoints.map((ep, i) => buildProbeEntry(ep, probeResults![i]!));
+    probeEntries = endpoints.map((ep, i) => {
+      const r = probeResults[i];
+      if (!r) return buildProbeEntry(ep, { ok: false, code: "UNKNOWN", message: "Missing result", responseTimeMs: null });
+      return buildProbeEntry(ep, r);
+    });
   }
 
   // Output

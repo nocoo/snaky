@@ -72,7 +72,7 @@ export function loadConfig(path?: string): LoadResult {
       userEndpointMap.set(ue.name, {
         name: ue.name,
         method: "cftrace",
-        domain: (ue as { domain?: string }).domain!,
+        domain: (ue as { domain?: string }).domain ?? "",
         category: "user",
         tier: ue.tier ?? 1,
       });
@@ -81,8 +81,8 @@ export function loadConfig(path?: string): LoadResult {
       userEndpointMap.set(ue.name, {
         name: ue.name,
         method: "http-header",
-        url: hep.url!,
-        headers: hep.headers!,
+        url: hep.url ?? "",
+        headers: hep.headers ?? [],
         category: "user",
         tier: ue.tier ?? 1,
       });
@@ -109,7 +109,7 @@ export function loadConfig(path?: string): LoadResult {
     }
     userPingMap.set(upt.name, {
       name: upt.name,
-      url: upt.url!,
+      url: upt.url ?? "",
       tag: upt.tag ?? "user",
       tier: upt.tier ?? 1,
     });

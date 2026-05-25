@@ -214,7 +214,8 @@ export function enableEndpoint(
 
   const epIdx = endpoints.findIndex((e) => e.name === name);
   if (epIdx >= 0) {
-    const entry = endpoints[epIdx]!;
+    const entry = endpoints[epIdx];
+    if (!entry) return { ok: false, error: `Endpoint '${name}' not found` };
     const isTombstone =
       entry.disabled === true && !entry.method && !entry.domain && !entry.url;
     if (isTombstone) {
@@ -229,7 +230,8 @@ export function enableEndpoint(
 
   const ptIdx = pingTargets.findIndex((p) => p.name === name);
   if (ptIdx >= 0) {
-    const entry = pingTargets[ptIdx]!;
+    const entry = pingTargets[ptIdx];
+    if (!entry) return { ok: false, error: `Endpoint '${name}' not found` };
     const isTombstone =
       entry.disabled === true && !entry.url;
     if (isTombstone) {
