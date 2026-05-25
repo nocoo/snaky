@@ -6,6 +6,7 @@ import SwiftUI
 final class StatusItemController {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
+    private let viewModel = AppViewModel(bridge: CLIBridge())
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -13,7 +14,6 @@ final class StatusItemController {
         popover.contentSize = NSSize(width: 360, height: 600)
         popover.behavior = .transient
 
-        let viewModel = AppViewModel(bridge: CLIBridge())
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView(viewModel: viewModel)
         )
@@ -50,7 +50,9 @@ final class StatusItemController {
         statusItem.menu = nil
     }
 
-    @objc private func refresh() {}
+    @objc private func refresh() {
+        viewModel.refresh()
+    }
 
     @objc private func quit() {
         NSApp.terminate(nil)

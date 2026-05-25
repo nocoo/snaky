@@ -10,6 +10,7 @@ public struct PopoverContentView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                headerRow
                 switch viewModel.state {
                 case .idle:
                     ContentUnavailableView("Ready", systemImage: "network", description: Text("Open to refresh"))
@@ -34,17 +35,29 @@ public struct PopoverContentView: View {
         .onAppear { viewModel.refresh() }
     }
 
+    private var headerRow: some View {
+        HStack {
+            Text("Snaky").font(.headline)
+            Spacer()
+            if viewModel.state == .loading {
+                ProgressView().controlSize(.mini)
+            }
+            Button(viewModel.state == .loading ? "Cancel" : "Refresh") {
+                if viewModel.state == .loading {
+                    viewModel.cancel()
+                } else {
+                    viewModel.refresh()
+                }
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
     @ViewBuilder
     private var loadingView: some View {
         if let previous = viewModel.previousResult {
             successView(previous)
                 .opacity(0.6)
-        }
-        HStack {
-            ProgressView()
-                .controlSize(.small)
-            Text("Loading...")
-                .foregroundStyle(.secondary)
         }
     }
 
