@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# scripts/build.sh — Build Snaky.app bundle from SPM release binary
+#
+# Usage:
+#   ./scripts/build.sh                    # unsigned build
+#   ./scripts/build.sh --sign "Apple Development"
+#
+# Output: build/release/Snaky.app
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+SIGN_IDENTITY=""
+DEFAULT_SIGN_IDENTITY="Apple Development"
+DEFAULT_TEAM_ID="93WWLTN9XU"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --sign)
+            SIGN_IDENTITY="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--sign \"Identity\"]"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$SIGN_IDENTITY" ]]; then
+    SIGN_IDENTITY="$DEFAULT_SIGN_IDENTITY"
+fi
+
+export DEVELOPMENT_TEAM="$DEFAULT_TEAM_ID"
+
+BUILD_DIR="$PROJECT_DIR/build"
+RELEASE_DIR="$BUILD_DIR/release"
+APP_BUNDLE="$RELEASE_DIR/Snaky.app"
+CONTENTS_DIR="$APP_BUNDLE/Contents"
+MACOS_DIR="$CONTENTS_DIR/MacOS"
+RESOURCES_DIR="$CONTENTS_DIR/Resources"
+
+echo "==> Cleaning previous build..."
+rm -rf "$APP_BUNDLE"
+
+echo "==> Building release binary with SPM..."
+swift build -c release --package-path "$PROJECT_DIR" 2>&1
+
+EXECUTABLE="$PROJECT_DIR/.build/release/Snaky"
+if [[ ! -f "$EXECUTABLE" ]]; then
+    echo "ERROR: Built executable not found at $EXECUTABLE"
+    exit 1
+fi
+
+echo "==> Creating app bundle structure..."
+mkdir -p "$MACOS_DIR"
+mkdir -p "$RESOURCES_DIR"
+
+echo "==> Copying executable..."
+cp "$EXECUTABLE" "$MACOS_DIR/Snaky"
+
+echo "==> Copying resource bundle..."
+BUNDLE_SRC="$PROJECT_DIR/.build/release/Snaky_SnakyCore.bundle"
+if [[ -d "$BUNDLE_SRC" ]]; then
+    cp -R "$BUNDLE_SRC" "$RESOURCES_DIR/"
+fi
+
+echo "==> Copying Info.plist..."
+cp "$PROJECT_DIR/Sources/Snaky/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
+
+ICON_SOURCE="$PROJECT_DIR/../../logo.png"
+if [[ -f "$ICON_SOURCE" ]]; then
+    echo "==> Generating app icon from logo.png..."
+    ICONSET_DIR="$BUILD_DIR/Snaky.iconset"
+    rm -rf "$ICONSET_DIR"
+    mkdir -p "$ICONSET_DIR"
+
+    sips -z 16 16     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_16x16.png"      > /dev/null 2>&1
+    sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_16x16@2x.png"   > /dev/null 2>&1
+    sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_32x32.png"      > /dev/null 2>&1
+    sips -z 64 64     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_32x32@2x.png"   > /dev/null 2>&1
+    sips -z 128 128   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_128x128.png"    > /dev/null 2>&1
+    sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_128x128@2x.png" > /dev/null 2>&1
+    sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_256x256.png"    > /dev/null 2>&1
+    sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_256x256@2x.png" > /dev/null 2>&1
+    sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512.png"    > /dev/null 2>&1
+    sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512@2x.png" > /dev/null 2>&1
+
+    iconutil -c icns -o "$RESOURCES_DIR/AppIcon.icns" "$ICONSET_DIR"
+    rm -rf "$ICONSET_DIR"
+
+    if ! /usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$CONTENTS_DIR/Info.plist" > /dev/null 2>&1; then
+        /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$CONTENTS_DIR/Info.plist"
+    fi
+    echo "    Icon generated: $RESOURCES_DIR/AppIcon.icns"
+else
+    echo "    WARN: logo.png not found, skipping icon generation"
+fi
+
+if [[ -n "$SIGN_IDENTITY" ]]; then
+    ENTITLEMENTS="$PROJECT_DIR/Sources/Snaky/Resources/Snaky.entitlements"
+
+    echo "==> Code signing with identity: $SIGN_IDENTITY"
+    codesign --force --options runtime \
+        --sign "$SIGN_IDENTITY" \
+        --identifier "com.nocoo.snaky" \
+        --entitlements "$ENTITLEMENTS" \
+        --timestamp \
+        "$APP_BUNDLE"
+
+    echo "==> Verifying signature..."
+    codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE" 2>&1
+    echo "    Signature valid."
+fi
+
+APP_SIZE=$(du -sh "$APP_BUNDLE" | cut -f1)
+echo ""
+echo "==> Build complete!"
+echo "    Output: $APP_BUNDLE"
+echo "    Size:   $APP_SIZE"

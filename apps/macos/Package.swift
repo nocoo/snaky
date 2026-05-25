@@ -18,7 +18,8 @@ let package = Package(
         .executableTarget(
             name: "Snaky",
             dependencies: ["SnakyCore"],
-            path: "Sources/Snaky"
+            path: "Sources/Snaky",
+            exclude: ["Resources"]
         ),
         .testTarget(
             name: "SnakyCoreTests",
