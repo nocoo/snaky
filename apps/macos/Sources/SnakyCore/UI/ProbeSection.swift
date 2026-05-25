@@ -20,10 +20,11 @@ private struct ProbeRow: View {
     let model: ProbeRowModel
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             Circle()
                 .fill(model.isSuccess ? Color.green : Color.red)
                 .frame(width: 7, height: 7)
+                .offset(y: 4)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -57,6 +58,7 @@ private struct ProbeRow: View {
             Text(model.latencyText)
                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(model.latencyColor.color)
+                .frame(minWidth: 50, alignment: .trailing)
         }
         .padding(.vertical, 5)
     }
