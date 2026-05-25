@@ -9,7 +9,7 @@ public struct PopoverContentView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 headerRow
                 switch viewModel.state {
                 case .idle:
@@ -29,61 +29,81 @@ public struct PopoverContentView: View {
                     }
                 }
             }
-            .padding()
+            .padding(14)
         }
-        .frame(width: 360, height: 600)
+        .frame(width: 380, height: 620)
+        .background(Theme.panelBackground)
         .onAppear { viewModel.refresh() }
         .safeAreaInset(edge: .bottom) {
             if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {
-                VStack(spacing: 2) {
-                    Divider()
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Theme.cardBorder)
+                        .frame(height: 1)
                     HStack {
                         if let status = viewModel.statusMessage {
                             Text(status)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.secondaryText)
                         } else if let date = viewModel.lastUpdated {
                             Text("Updated \(date, style: .relative) ago")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
                         if let version = viewModel.cliVersion {
                             Text("snaky v\(version)")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Theme.panelBackground)
                 }
             }
         }
     }
 
     private var headerRow: some View {
-        HStack {
-            Text("Snaky").font(.headline)
+        HStack(alignment: .center) {
+            Image(systemName: "network")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.sectionTitle)
+            Text("Snaky")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Theme.primaryText)
             Spacer()
             if viewModel.state == .loading {
-                ProgressView().controlSize(.mini)
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(Theme.sectionTitle)
             }
-            Button(viewModel.state == .loading ? "Cancel" : "Refresh") {
+            Button {
                 if viewModel.state == .loading {
                     viewModel.cancel()
                 } else {
                     viewModel.refresh()
                 }
+            } label: {
+                Text(viewModel.state == .loading ? "Cancel" : "Refresh")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.sectionTitle)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.sectionTitle.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
         }
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder
     private var loadingView: some View {
         if let previous = viewModel.previousResult {
             successView(previous)
-                .opacity(0.6)
+                .opacity(0.5)
         }
     }
 
@@ -92,11 +112,9 @@ public struct PopoverContentView: View {
         if let probe = output.probe {
             if !probe.uniqueIps.isEmpty {
                 UniqueIpSection(ips: probe.uniqueIps)
-                Divider()
             }
             if !probe.results.isEmpty {
                 ProbeSection(entries: probe.results)
-                Divider()
             }
         }
         if let ping = output.ping, !ping.results.isEmpty {
@@ -112,16 +130,21 @@ public struct PopoverContentView: View {
     }
 
     private func errorBanner(_ error: CLIError) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.yellow)
+                .foregroundStyle(.orange)
             Text(errorMessage(error))
-                .font(.caption)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.primaryText)
             Spacer()
         }
-        .padding(8)
-        .background(.red.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(10)
+        .background(Color.red.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.red.opacity(0.25), lineWidth: 1)
+        )
     }
 
     private func errorMessage(_ error: CLIError) -> String {
