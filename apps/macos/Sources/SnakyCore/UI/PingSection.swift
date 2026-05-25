@@ -35,9 +35,12 @@ private struct PingRow: View {
                 }
                 HStack(spacing: 2) {
                     ForEach(Array(model.dots.enumerated()), id: \.offset) { _, dot in
+                        let barHeight = dot.isSuccess
+                            ? CGFloat(min(max(dot.ms / 30.0, 0.3), 1.0)) * 10
+                            : CGFloat(3)
                         RoundedRectangle(cornerRadius: 1.5)
                             .fill(dot.isSuccess ? Color.green.opacity(0.8) : Color.red.opacity(0.6))
-                            .frame(width: 4, height: dot.isSuccess ? CGFloat(min(max(dot.ms / 30.0, 0.3), 1.0)) * 10 : 3)
+                            .frame(width: 4, height: barHeight)
                     }
                 }
                 .frame(height: 10, alignment: .bottom)

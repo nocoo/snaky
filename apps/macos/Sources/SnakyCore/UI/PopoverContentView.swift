@@ -29,8 +29,10 @@ public struct PopoverContentView: View {
                     }
                 }
             }
-            .padding(14)
+            .padding(16)
+            .padding(.bottom, 40)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .frame(width: 380, height: 620)
         .background(Theme.panelBackground)
         .onAppear { viewModel.refresh() }
@@ -57,8 +59,8 @@ public struct PopoverContentView: View {
                                 .foregroundStyle(Theme.tertiaryText)
                         }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                     .background(Theme.panelBackground)
                 }
             }
