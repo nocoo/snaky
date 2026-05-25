@@ -21,10 +21,9 @@ private struct ProbeRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(model.isSuccess ? Color.green : Color.red)
-                .frame(width: 7, height: 7)
-                .offset(y: 4)
+            FaviconView(name: model.name, isSuccess: model.isSuccess)
+                .frame(width: 16, height: 16)
+                .offset(y: 1)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -42,9 +41,6 @@ private struct ProbeRow: View {
                             .font(.system(size: 10))
                         Text(model.ip)
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(Theme.secondaryText)
-                        Text(model.location)
-                            .font(.system(size: 10))
                             .foregroundStyle(Theme.secondaryText)
                         Text(model.colo)
                             .font(.system(size: 10))
