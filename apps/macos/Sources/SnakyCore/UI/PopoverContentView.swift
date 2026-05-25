@@ -18,9 +18,13 @@ public struct PopoverContentView: View {
                 case .success(let output):
                     successView(output)
                 case .error(let error):
-                    errorBanner(error)
-                    if let previous = viewModel.previousResult {
-                        successView(previous)
+                    if error == .notFound {
+                        SetupView(onRedetect: { viewModel.refresh() })
+                    } else {
+                        errorBanner(error)
+                        if let previous = viewModel.previousResult {
+                            successView(previous)
+                        }
                     }
                 }
             }
