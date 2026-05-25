@@ -8,10 +8,10 @@ public enum LatencyColor: Sendable {
 
     public var color: Color {
         switch self {
-        case .green: .green
-        case .yellow: .yellow
-        case .red: .red
-        case .none: .secondary
+        case .green: Color(red: 0.30, green: 0.85, blue: 0.45)
+        case .yellow: Color(red: 0.95, green: 0.75, blue: 0.25)
+        case .red: Color(red: 0.95, green: 0.35, blue: 0.35)
+        case .none: Color.white.opacity(0.4)
         }
     }
 
