@@ -3,7 +3,7 @@ import type { DnsLeakOutput } from "./types.js";
 export function formatDnsLeakTable(output: DnsLeakOutput): string {
   const lines: string[] = [];
 
-  lines.push(`DNS Leak Test (${output.rounds} rounds)`);
+  lines.push(`🛡️ DNS Leak Test (${output.rounds} rounds)`);
   lines.push("─".repeat(49));
 
   if (output.verdict === "inconclusive" && output.count === 0) {
