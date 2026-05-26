@@ -2,10 +2,12 @@ import SwiftUI
 
 public struct PopoverContentView: View {
     @ObservedObject var viewModel: AppViewModel
+    @ObservedObject var dnsLeakViewModel: DnsLeakViewModel
     @State private var selectedTab: AppTab = .probe
 
-    public init(viewModel: AppViewModel) {
+    public init(viewModel: AppViewModel, dnsLeakViewModel: DnsLeakViewModel) {
         self.viewModel = viewModel
+        self.dnsLeakViewModel = dnsLeakViewModel
     }
 
     public var body: some View {
@@ -19,7 +21,7 @@ public struct PopoverContentView: View {
                     case .probe:
                         probeContent
                     case .dnsLeak:
-                        DnsLeakView()
+                        DnsLeakView(viewModel: dnsLeakViewModel)
                     }
                 }
                 .padding(16)

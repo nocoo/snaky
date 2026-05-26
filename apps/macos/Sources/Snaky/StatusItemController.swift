@@ -7,6 +7,7 @@ final class StatusItemController {
     private let statusItem: NSStatusItem
     private let panel: NSPanel
     private let viewModel = AppViewModel(bridge: CLIBridge())
+    private let dnsLeakViewModel = DnsLeakViewModel(bridge: CLIBridge())
     private var eventMonitor: Any?
 
     init() {
@@ -29,7 +30,7 @@ final class StatusItemController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
         let hostingView = NSHostingView(
-            rootView: PopoverContentView(viewModel: viewModel)
+            rootView: PopoverContentView(viewModel: viewModel, dnsLeakViewModel: dnsLeakViewModel)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         )
         panel.contentView = hostingView
