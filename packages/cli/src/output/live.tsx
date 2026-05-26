@@ -45,7 +45,7 @@ function ProbeRow({ slot }: { slot: ProbeSlot }): React.ReactElement {
     const latStr = `${entry.responseTimeMs}ms`;
     return (
       <Text>
-        <Text color="green">✓</Text> {entry.name.padEnd(16)}{" "}
+        <Text color="green">✓</Text> {entry.name.padEnd(18)}{" "}
         {(entry.location ?? "—").padEnd(8)}{" "}
         {(entry.colo ?? "—").padEnd(5)}{" "}
         <Text color={latencyColor(entry.responseTimeMs)}>{latStr.padStart(7)}</Text>
@@ -55,7 +55,7 @@ function ProbeRow({ slot }: { slot: ProbeSlot }): React.ReactElement {
   }
   return (
     <Text>
-      <Text color="red">✗</Text> {entry.name.padEnd(16)}{" "}
+      <Text color="red">✗</Text> {entry.name.padEnd(18)}{" "}
       {"—".padEnd(8)} {"—".padEnd(5)}{" "}
       <Text color="red">{"UNKNOWN".padStart(7)}</Text>
     </Text>
@@ -103,7 +103,6 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
       result: { name } as unknown as PingResult,
     })),
   );
-  const [complete, setCompleteState] = useState(false);
 
   React.useEffect(() => {
     onReady({
@@ -125,7 +124,7 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
         setPings(results.map((r) => ({ status: "done", result: r })));
       },
       setComplete() {
-        setCompleteState(true);
+        // no-op, kept for interface compatibility
       },
     });
   }, [onReady]);
@@ -140,16 +139,15 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
           ))}
         </Box>
       )}
-      {probeNames.length > 0 && pingNames.length > 0 && <Text>{""}</Text>}
       {probeNames.length > 0 && (
         <Box flexDirection="column">
+          <Text>{""}</Text>
           <Text bold>🔀 Split Tunnel Probe</Text>
           {probes.map((slot, i) => (
             <ProbeRow key={probeNames[i]} slot={slot} />
           ))}
         </Box>
       )}
-      {complete && <Text dimColor>Done.</Text>}
     </Box>
   );
 }
