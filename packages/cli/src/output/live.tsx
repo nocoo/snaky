@@ -140,8 +140,7 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
         </Box>
       )}
       {probeNames.length > 0 && (
-        <Box flexDirection="column">
-          <Text>{""}</Text>
+        <Box flexDirection="column" marginTop={1}>
           <Text bold>🔀 Split Tunnel Probe</Text>
           {probes.map((slot, i) => (
             <ProbeRow key={probeNames[i]} slot={slot} />
