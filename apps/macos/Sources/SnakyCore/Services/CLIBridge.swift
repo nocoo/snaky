@@ -109,11 +109,16 @@ public struct CLIBridge: Sendable {
         return try await invoke(executablePath: path, arguments: ["--json"])
     }
 
-    public func invoke(mode: String) async throws -> FullOutput {
+    public func invoke(mode: String, tier: Int? = nil) async throws -> FullOutput {
         guard let path = await discovery.discover() else {
             throw CLIError.notFound
         }
-        return try await invoke(executablePath: path, arguments: [mode, "--json"])
+        var args = [mode]
+        if let tier {
+            args += ["--tier", String(tier)]
+        }
+        args.append("--json")
+        return try await invoke(executablePath: path, arguments: args)
     }
 
     private func invoke(executablePath path: String, arguments args: [String]) async throws -> FullOutput {

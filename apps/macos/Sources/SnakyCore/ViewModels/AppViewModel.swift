@@ -11,7 +11,9 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var lastUpdated: Date?
     @Published public private(set) var statusMessage: String?
     @Published public private(set) var pingHistory: [String: [PingRoundDot]] = [:]
+    @Published public var enabledProbeTargets: Set<String>
 
+    private static let enabledProbeTargetsKey = "enabledProbeTargets"
     private let maxHistoryDots = 30
 
     public enum ViewState: Equatable {
@@ -30,6 +32,20 @@ public final class AppViewModel: ObservableObject {
 
     public init(bridge: CLIBridge) {
         self.bridge = bridge
+        if let saved = UserDefaults.standard.stringArray(forKey: Self.enabledProbeTargetsKey) {
+            self.enabledProbeTargets = Set(saved)
+        } else {
+            self.enabledProbeTargets = ProbeTargetRegistry.tier1Names
+        }
+    }
+
+    public func toggleProbeTarget(_ name: String) {
+        if enabledProbeTargets.contains(name) {
+            enabledProbeTargets.remove(name)
+        } else {
+            enabledProbeTargets.insert(name)
+        }
+        UserDefaults.standard.set(Array(enabledProbeTargets), forKey: Self.enabledProbeTargetsKey)
     }
 
     public func refresh() {
@@ -105,7 +121,7 @@ public final class AppViewModel: ObservableObject {
 
     private nonisolated func fetchProbe() async -> PartialResult {
         do {
-            return .probe(.success(try await bridge.invoke(mode: "probe")))
+            return .probe(.success(try await bridge.invoke(mode: "probe", tier: 2)))
         } catch let error as CLIError {
             return .probe(.failure(error))
         } catch {

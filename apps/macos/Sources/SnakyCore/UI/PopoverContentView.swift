@@ -81,12 +81,22 @@ public struct PopoverContentView: View {
                     viewModel.refresh()
                 }
             } label: {
-                Text(viewModel.state == .loading ? "Cancel" : "Refresh")
-                    .font(.system(size: 11, weight: .medium))
+                Image(systemName: viewModel.state == .loading ? "xmark" : "arrow.clockwise")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.sectionTitle)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .frame(width: 26, height: 26)
                     .background(Theme.sectionTitle.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+            }
+            .buttonStyle(.plain)
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Image(systemName: "power")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 26, height: 26)
+                    .background(Theme.secondaryText.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
@@ -134,9 +144,19 @@ public struct PopoverContentView: View {
             UniqueIpSection(ips: deduplicatedIps(probe.uniqueIps))
         }
         if let probe = output.probe, !probe.results.isEmpty {
-            ProbeSection(entries: probe.results)
+            ProbeSection(
+                entries: probe.results,
+                enabledTargets: viewModel.enabledProbeTargets,
+                onToggle: viewModel.toggleProbeTarget
+            )
+        } else {
+            ProbeSection(
+                entries: [],
+                enabledTargets: viewModel.enabledProbeTargets,
+                onToggle: viewModel.toggleProbeTarget
+            )
         }
-        if output.probe?.results.isEmpty ?? true && output.ping?.results.isEmpty ?? true {
+        if output.ping?.results.isEmpty ?? true && output.probe == nil {
             ContentUnavailableView(
                 "No Endpoints",
                 systemImage: "tray",
