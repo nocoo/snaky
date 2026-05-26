@@ -158,9 +158,50 @@ public struct CLIBridge: Sendable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    public func invokeDnsLeak(extended: Bool = false) async throws -> DnsLeakOutput {
+        guard let path = await discovery.discover() else {
+            throw CLIError.notFound
+        }
+        var args = ["dns-leak", "--json"]
+        if extended {
+            args.append("--extended")
+        }
+
+        let output: ProcessOutput
+        do {
+            output = try await executor.run(
+                executablePath: path,
+                arguments: args,
+                timeout: invocationTimeout
+            )
+        } catch let error as CLIError {
+            throw error
+        } catch {
+            throw CLIError.fatal("Failed to launch CLI: \(error.localizedDescription)")
+        }
+
+        switch output.exitCode {
+        case 0, 1, 2:
+            return try decodeDnsLeakOutput(output.stdout)
+        case 3:
+            let stderr = String(data: output.stderr, encoding: .utf8) ?? "Unknown error"
+            throw CLIError.fatal(stderr.trimmingCharacters(in: .whitespacesAndNewlines))
+        default:
+            throw CLIError.crashed(output.exitCode)
+        }
+    }
+
     private func decodeOutput(_ data: Data) throws -> FullOutput {
         do {
             return try JSONDecoder().decode(FullOutput.self, from: data)
+        } catch {
+            throw CLIError.decodingFailed(error.localizedDescription)
+        }
+    }
+
+    private func decodeDnsLeakOutput(_ data: Data) throws -> DnsLeakOutput {
+        do {
+            return try JSONDecoder().decode(DnsLeakOutput.self, from: data)
         } catch {
             throw CLIError.decodingFailed(error.localizedDescription)
         }

@@ -93,3 +93,33 @@ public struct PingResult: Codable, Sendable, Equatable {
     public let rounds: [Double]
     public let error: ProbeError?
 }
+
+// MARK: - DNS Leak Detection
+
+public enum DnsLeakVerdict: String, Codable, Sendable, Equatable {
+    case noLeak = "no_leak"
+    case leak
+    case inconclusive
+}
+
+public struct DnsServer: Codable, Sendable, Equatable {
+    public let ip: String
+    public let country: String?
+    public let countryCode: String?
+    public let city: String?
+    public let isp: String?
+    public let asn: Int?
+    public let asOrg: String?
+    public let leaked: Bool
+}
+
+public struct DnsLeakOutput: Codable, Sendable, Equatable {
+    public let token: String
+    public let rounds: Int
+    public let userIp: String?
+    public let userCountry: String?
+    public let userCountryCode: String?
+    public let dnsServers: [DnsServer]
+    public let count: Int
+    public let verdict: DnsLeakVerdict
+}
