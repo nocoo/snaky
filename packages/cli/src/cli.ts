@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { AddCommand, NameCommand, RunCommand } from "./cli/args.js";
+import type { AddCommand, DnsLeakCommand, NameCommand, RunCommand } from "./cli/args.js";
 import { parseCliArgs } from "./cli/args.js";
 import { computeExitCode } from "./cli/exit-code.js";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./config/builtins.js";
@@ -9,6 +9,8 @@ import { loadConfig } from "./config/loader.js";
 import { addEndpoint, disableEndpoint, enableEndpoint, removeEndpoint } from "./config/mutate.js";
 import { loadSecrets } from "./config/secrets.js";
 import type { Endpoint } from "./config/types.js";
+import { runDnsLeakDetection } from "./dns-leak/detect.js";
+import { formatDnsLeakTable } from "./dns-leak/output.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
@@ -84,6 +86,10 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command.type === "remove" || command.type === "disable" || command.type === "enable") {
     return handleMutate(command, configPath);
+  }
+
+  if (command.type === "dns-leak") {
+    return handleDnsLeak(command, flags, configPath);
   }
 
   if (command.type === "run") {
@@ -422,6 +428,39 @@ async function handleRun(
   return computeExitCode(mode, probeResults, pingResults);
 }
 
+async function handleDnsLeak(
+  command: DnsLeakCommand,
+  flags: { json?: boolean; config?: string },
+  configPath: string,
+): Promise<number> {
+  const loaded = loadConfig(existsSync(configPath) ? configPath : undefined);
+  if (!loaded.ok) {
+    process.stderr.write(`Error: ${loaded.error}\n`);
+    return 3;
+  }
+
+  const config = loaded.config;
+  const secrets = loadSecrets();
+
+  const rounds = command.rounds
+    ?? (command.extended ? 8 : undefined)
+    ?? config.dnsLeak.rounds;
+
+  const { output, exitCode } = await runDnsLeakDetection({
+    rounds,
+    expectedResolvers: config.dnsLeak.expectedResolvers,
+    echoApiKey: secrets.echoApiKey,
+  });
+
+  if (flags.json) {
+    process.stdout.write(`${JSON.stringify(output)}\n`);
+  } else {
+    process.stdout.write(`${formatDnsLeakTable(output)}\n`);
+  }
+
+  return exitCode;
+}
+
 function printHelp(): void {
   process.stdout.write(`Usage: snaky [command] [options]
 
@@ -429,6 +468,7 @@ Commands:
   (none)              Run all: probe + ping
   probe [name...]     Probe specific endpoints (IP detection)
   ping                Connectivity test only (latency)
+  dns-leak            DNS leak detection test
   list                List all endpoints
   add <name> <domain> Add cftrace endpoint
   remove <name>       Remove an endpoint
@@ -443,6 +483,8 @@ Options:
   --timeout <ms>      Per-endpoint timeout (default: 5000)
   --concurrency <n>   Max parallel requests (default: 10)
   --tier <n>          Max endpoint tier to include (default: 1)
+  --rounds <n>        DNS leak test rounds (default: 5, range: 1-20)
+  --extended          DNS leak extended test (8 rounds)
   --config <path>     Custom config file path
   --category <cat>    Filter by category
   --no-color          Disable colored output
