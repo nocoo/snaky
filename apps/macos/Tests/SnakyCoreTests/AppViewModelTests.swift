@@ -21,7 +21,8 @@ struct AppViewModelTests {
                 summary: ProbeSummary(total: 0, succeeded: 0, failed: 0),
                 uniqueIps: []
             ),
-            ping: PingOutput(results: [])
+            ping: PingOutput(results: []),
+            ipDetails: nil
         )
     }
 

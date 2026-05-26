@@ -48,6 +48,7 @@ public final class AppViewModel: ObservableObject {
 
             var ping: PingOutput?
             var probe: ProbeOutput?
+            var ipDetails: [IpDetail]?
             var pingError: CLIError?
             var probeError: CLIError?
 
@@ -60,12 +61,13 @@ public final class AppViewModel: ObservableObject {
                     pingError = error
                 case .probe(.success(let output)):
                     probe = output.probe
+                    ipDetails = output.ipDetails
                 case .probe(.failure(let error)):
                     probeError = error
                 }
 
                 if ping != nil || probe != nil {
-                    let merged = FullOutput(mode: .all, probe: probe, ping: ping)
+                    let merged = FullOutput(mode: .all, probe: probe, ping: ping, ipDetails: ipDetails)
                     previousResult = merged
                     lastUpdated = Date()
                     state = .success(merged)

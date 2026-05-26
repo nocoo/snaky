@@ -26,9 +26,10 @@ struct ErrorStateTests {
                     )
                 ],
                 summary: ProbeSummary(total: 1, succeeded: 1, failed: 0),
-                uniqueIps: [UniqueIp(ip: "1.2.3.4", location: "JP", count: 1)]
+                uniqueIps: [UniqueIp(ip: "1.2.3.4", location: "JP", count: 1, detail: nil)]
             ),
-            ping: PingOutput(results: [])
+            ping: PingOutput(results: []),
+            ipDetails: nil
         )
     }
 

@@ -10,6 +10,7 @@ public struct FullOutput: Codable, Sendable, Equatable {
     public let mode: RunMode
     public let probe: ProbeOutput?
     public let ping: PingOutput?
+    public let ipDetails: [IpDetail]?
 }
 
 public struct ProbeOutput: Codable, Sendable, Equatable {
@@ -28,6 +29,18 @@ public struct UniqueIp: Codable, Sendable, Equatable {
     public let ip: String
     public let location: String?
     public let count: Int
+    public let detail: IpDetail?
+}
+
+public struct IpDetail: Codable, Sendable, Equatable {
+    public let ip: String
+    public let country: String?
+    public let countryCode: String?
+    public let province: String?
+    public let city: String?
+    public let isp: String?
+    public let asn: Int?
+    public let asOrg: String?
 }
 
 public struct ProbeEntry: Codable, Sendable, Equatable {
