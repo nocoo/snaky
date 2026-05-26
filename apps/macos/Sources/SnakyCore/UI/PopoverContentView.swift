@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct PopoverContentView: View {
     @ObservedObject var viewModel: AppViewModel
+    @State private var selectedTab: AppTab = .probe
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -12,22 +13,13 @@ public struct PopoverContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     headerRow
-                    switch viewModel.state {
-                    case .idle:
-                        ContentUnavailableView("Ready", systemImage: "network", description: Text("Open to refresh"))
-                    case .loading:
-                        loadingView
-                    case .success(let output):
-                        successView(output)
-                    case .error(let error):
-                        if error == .notFound {
-                            SetupView(onBrowse: { viewModel.selectCLIPath() }, onRedetect: { viewModel.refresh() })
-                        } else {
-                            errorBanner(error)
-                            if let previous = viewModel.previousResult {
-                                successView(previous)
-                            }
-                        }
+                    TabPicker(selection: $selectedTab)
+
+                    switch selectedTab {
+                    case .probe:
+                        probeContent
+                    case .dnsLeak:
+                        DnsLeakView()
                     }
                 }
                 .padding(16)
@@ -113,9 +105,30 @@ public struct PopoverContentView: View {
     }
 
     @ViewBuilder
+    private var probeContent: some View {
+        switch viewModel.state {
+        case .idle:
+            ContentUnavailableView("Ready", systemImage: "network", description: Text("Open to refresh"))
+        case .loading:
+            loadingView
+        case .success(let output):
+            successView(output)
+        case .error(let error):
+            if error == .notFound {
+                SetupView(onBrowse: { viewModel.selectCLIPath() }, onRedetect: { viewModel.refresh() })
+            } else {
+                errorBanner(error)
+                if let previous = viewModel.previousResult {
+                    successView(previous)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private func successView(_ output: FullOutput) -> some View {
         if let ping = output.ping, !ping.results.isEmpty {
-            PingSection(results: ping.results)
+            PingSection(results: ping.results, history: viewModel.pingHistory)
         }
         if let probe = output.probe, !probe.uniqueIps.isEmpty {
             UniqueIpSection(ips: deduplicatedIps(probe.uniqueIps))

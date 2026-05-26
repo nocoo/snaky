@@ -10,6 +10,9 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var cliVersion: String?
     @Published public private(set) var lastUpdated: Date?
     @Published public private(set) var statusMessage: String?
+    @Published public private(set) var pingHistory: [String: [PingRoundDot]] = [:]
+
+    private let maxHistoryDots = 30
 
     public enum ViewState: Equatable {
         case idle
@@ -75,12 +78,18 @@ public final class AppViewModel: ObservableObject {
             }
 
             guard !Task.isCancelled else { return }
+            finalizeFetch(ping: ping, probe: probe, pingError: pingError, probeError: probeError)
+        }
+    }
 
-            if ping == nil && probe == nil {
-                let error = pingError ?? probeError ?? .timeout
-                if error == .timeout { statusMessage = "Timed out" }
-                state = .error(error)
-            }
+    private func finalizeFetch(ping: PingOutput?, probe: ProbeOutput?, pingError: CLIError?, probeError: CLIError?) {
+        if let results = ping?.results {
+            appendPingHistory(results)
+        }
+        if ping == nil && probe == nil {
+            let error = pingError ?? probeError ?? .timeout
+            if error == .timeout { statusMessage = "Timed out" }
+            state = .error(error)
         }
     }
 
@@ -101,6 +110,18 @@ public final class AppViewModel: ObservableObject {
             return .probe(.failure(error))
         } catch {
             return .probe(.failure(.timeout))
+        }
+    }
+
+    private func appendPingHistory(_ results: [PingResult]) {
+        for result in results {
+            let dots = result.rounds.map { PingRoundDot(isSuccess: $0 >= 0, ms: $0) }
+            var existing = pingHistory[result.name, default: []]
+            existing.append(contentsOf: dots)
+            if existing.count > maxHistoryDots {
+                existing = Array(existing.suffix(maxHistoryDots))
+            }
+            pingHistory[result.name] = existing
         }
     }
 
