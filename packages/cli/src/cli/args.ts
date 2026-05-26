@@ -20,11 +20,17 @@ export type NameCommand = {
   name: string;
 };
 
+export type DnsLeakCommand = {
+  type: "dns-leak";
+  rounds?: number;
+  extended: boolean;
+};
+
 export type SimpleCommand = {
   type: "list" | "config-path" | "config-show" | "config-init" | "version" | "help";
 };
 
-export type Command = RunCommand | AddCommand | NameCommand | SimpleCommand;
+export type Command = RunCommand | AddCommand | NameCommand | DnsLeakCommand | SimpleCommand;
 
 export type Flags = {
   json: boolean;
@@ -67,6 +73,8 @@ export function parseCliArgs(argv: string[]): ParseResult {
         method: { type: "string" },
         url: { type: "string" },
         header: { type: "string", multiple: true },
+        rounds: { type: "string" },
+        extended: { type: "boolean", default: false },
       },
       allowPositionals: true,
       strict: false,
@@ -156,6 +164,8 @@ export function parseCliArgs(argv: string[]): ParseResult {
       if (!name) return { ok: false, error: "enable requires a name" };
       return { ok: true, command: { type: "enable", name }, flags };
     }
+    case "dns-leak":
+      return parseDnsLeak(parsed.values as Record<string, unknown>, flags);
     case "config": {
       const subCmd = positionals[1];
       if (subCmd === "path") return { ok: true, command: { type: "config-path" }, flags };
@@ -219,4 +229,29 @@ function parseAdd(
   }
 
   return { ok: false, error: "add requires a domain or --method" };
+}
+
+function parseDnsLeak(
+  values: Record<string, unknown>,
+  flags: Flags,
+): ParseResult {
+  const extended = values.extended as boolean;
+
+  if (values.rounds) {
+    const v = Number(values.rounds as string);
+    if (!Number.isInteger(v) || v < 1 || v > 20) {
+      return { ok: false, error: "--rounds must be an integer between 1 and 20" };
+    }
+    return {
+      ok: true,
+      command: { type: "dns-leak", rounds: v, extended },
+      flags,
+    };
+  }
+
+  return {
+    ok: true,
+    command: { type: "dns-leak", extended },
+    flags,
+  };
 }
