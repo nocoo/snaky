@@ -134,7 +134,7 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
     <Box flexDirection="column">
       {pingNames.length > 0 && (
         <Box flexDirection="column">
-          <Text bold>Connectivity Test</Text>
+          <Text bold>🏓 Connectivity Test</Text>
           {pings.map((slot, i) => (
             <PingRow key={pingNames[i]} slot={slot} />
           ))}
@@ -143,7 +143,7 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
       {probeNames.length > 0 && pingNames.length > 0 && <Text>{""}</Text>}
       {probeNames.length > 0 && (
         <Box flexDirection="column">
-          <Text bold>Split Tunnel Probe</Text>
+          <Text bold>🔀 Split Tunnel Probe</Text>
           {probes.map((slot, i) => (
             <ProbeRow key={probeNames[i]} slot={slot} />
           ))}
