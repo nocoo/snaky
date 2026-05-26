@@ -14,6 +14,7 @@ import { formatDnsLeakTable } from "./dns-leak/output.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
+import { startSpinner } from "./output/spinner.js";
 import { formatIpSummaryTable, formatPingTable, formatProbeTable } from "./output/table.js";
 import type { FullOutput, IpDetail, ProbeEntry } from "./output/types.js";
 import { probeWithFallback } from "./probes/fallback.js";
@@ -378,8 +379,10 @@ async function handleRun(
   if (probeResults && uniqueIps.length > 0) {
     const secrets = loadSecrets();
     if (secrets.echoApiKey) {
+      const enrichSpinner = useLiveTui ? startSpinner("Enriching IP details...") : null;
       const ips = uniqueIps.map((u) => u.ip);
       const infoMap = await lookupIps(ips, secrets.echoApiKey);
+      enrichSpinner?.stop();
       if (infoMap.size > 0) {
         for (const u of uniqueIps) {
           const info = infoMap.get(u.ip);
@@ -446,11 +449,17 @@ async function handleDnsLeak(
     ?? (command.extended ? 8 : undefined)
     ?? config.dnsLeak.rounds;
 
+  const useTtySpinner = !flags.json && process.stdout.isTTY;
+  const spinner = useTtySpinner ? startSpinner("Detecting DNS resolvers...") : null;
+
   const { output, exitCode } = await runDnsLeakDetection({
     rounds,
     expectedResolvers: config.dnsLeak.expectedResolvers,
     echoApiKey: secrets.echoApiKey,
+    onProgress: spinner ? (msg) => spinner.update(msg) : undefined,
   });
+
+  spinner?.stop();
 
   if (flags.json) {
     process.stdout.write(`${JSON.stringify(output)}\n`);

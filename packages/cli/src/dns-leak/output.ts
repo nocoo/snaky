@@ -1,4 +1,4 @@
-import { colorCountry } from "../utils/color-country.js";
+import { colorCountry, colorCountryPad } from "../utils/color-country.js";
 import type { DnsLeakOutput } from "./types.js";
 
 export function formatDnsLeakTable(output: DnsLeakOutput): string {
@@ -32,7 +32,7 @@ export function formatDnsLeakTable(output: DnsLeakOutput): string {
     const num = String(i + 1).padEnd(2);
     const ip = s.ip.padEnd(17);
     const isp = (s.isp ?? "Unknown").slice(0, 16).padEnd(16);
-    const loc = (s.countryCode ? colorCountry(s.countryCode) : "??").padEnd(11);
+    const loc = colorCountryPad(s.countryCode ?? "??", 11);
     const status = s.leaked ? "⚠ LEAK" : "✓ OK";
     lines.push(`${num} ${ip} ${isp} ${loc} ${status}`);
   }

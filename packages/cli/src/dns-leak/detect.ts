@@ -8,6 +8,7 @@ export type DetectOptions = {
   expectedResolvers?: string[];
   echoApiKey?: string;
   fetchFn?: typeof fetch;
+  onProgress?: (message: string) => void;
 };
 
 type CollectorResult = {
@@ -185,6 +186,7 @@ export async function runDnsLeakDetection(
   const fetchFn = opts.fetchFn ?? fetch;
   const token = generateToken();
 
+  opts.onProgress?.("Fetching your IP...");
   const userInfo = await fetchUserIp(fetchFn);
   let userCountry: string | null = null;
   const userIp = userInfo?.ip ?? null;
@@ -196,12 +198,15 @@ export async function runDnsLeakDetection(
     if (info) userCountry = info.country;
   }
 
+  opts.onProgress?.("Sending DNS queries...");
   for (let i = 1; i <= opts.rounds; i++) {
+    opts.onProgress?.(`Sending DNS queries... (${i}/${opts.rounds})`);
     const hostname = `${token}-${i}.${DNS_SUFFIX}`;
     await lookupWithTimeout(hostname, LOOKUP_TIMEOUT_MS);
     if (i < opts.rounds) await sleep(ROUND_DELAY_MS);
   }
 
+  opts.onProgress?.("Collecting results...");
   await sleep(POLL_INTERVAL_MS);
 
   const resolverIps = await pollCollector(token, fetchFn);
@@ -218,6 +223,7 @@ export async function runDnsLeakDetection(
   }));
 
   if (opts.echoApiKey && resolverIps.length > 0) {
+    opts.onProgress?.("Enriching resolver info...");
     const enriched = await enrichIps(resolverIps, opts.echoApiKey, fetchFn);
     dnsServers = dnsServers.map((s) => {
       const info = enriched.get(s.ip);

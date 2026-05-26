@@ -1,6 +1,6 @@
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
-import { colorCountry } from "../utils/color-country.js";
+import { colorCountry, colorCountryPad } from "../utils/color-country.js";
 import type { ProbeEntry } from "./types.js";
 
 type TableOpts = {
@@ -29,7 +29,7 @@ export function formatProbeTable(
       lines.push(
         padRow([
           `${colorize("✓", "green", opts)} ${entry.name}`,
-          entry.location ? colorCountry(entry.location, opts.noColor) : "—",
+          entry.location ? colorCountryPad(entry.location, 10, opts.noColor) : "—".padEnd(10),
           entry.colo ?? "—",
           colorizeLatency(entry.responseTimeMs, opts),
           entry.ip,
@@ -39,7 +39,7 @@ export function formatProbeTable(
       lines.push(
         padRow([
           `${colorize("✗", "red", opts)} ${entry.name}`,
-          "—",
+          "—".padEnd(10),
           "—",
           colorize(entry.error.code, "red", opts),
           "—",
@@ -82,11 +82,11 @@ export function formatIpSummaryTable(
     const rawLoc = d
       ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
       : u.location ?? "—";
-    const loc = rawLoc !== "—" ? colorCountry(rawLoc, opts.noColor) : "—";
+    const loc = colorCountryPad(rawLoc, 14, opts.noColor);
     const isp = d?.isp ?? "—";
     const asn = d?.asn ? `AS${d.asn}` : "";
     lines.push(
-      `  ${u.ip.padEnd(42)} ${loc.padEnd(14)} ${isp}${asn ? `  ${asn}` : ""}`,
+      `  ${u.ip.padEnd(42)} ${loc} ${isp}${asn ? `  ${asn}` : ""}`,
     );
   }
   return lines.join("\n");
