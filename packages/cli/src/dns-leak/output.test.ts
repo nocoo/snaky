@@ -28,7 +28,7 @@ describe("formatDnsLeakTable", () => {
 
     const text = formatDnsLeakTable(output);
     expect(text).toContain("🛡️ DNS Leak Test (5 rounds)");
-    expect(text).toContain("Your IP: 104.28.12.34 (US)");
+    expect(text).toContain("Your IP: 104.28.12.34 (🇺🇸 US)");
     expect(text).toContain("172.64.36.1");
     expect(text).toContain("Cloudflare");
     expect(text).toContain("✓ OK");

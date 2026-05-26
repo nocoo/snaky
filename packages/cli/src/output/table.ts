@@ -1,5 +1,6 @@
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
+import { flagEmoji } from "../utils/flag-emoji.js";
 import type { ProbeEntry } from "./types.js";
 
 type TableOpts = {
@@ -28,7 +29,7 @@ export function formatProbeTable(
       lines.push(
         padRow([
           `${colorize("✓", "green", opts)} ${entry.name}`,
-          entry.location ?? "—",
+          entry.location ? `${flagEmoji(entry.location)} ${entry.location}` : "—",
           entry.colo ?? "—",
           colorizeLatency(entry.responseTimeMs, opts),
           entry.ip,
@@ -57,7 +58,7 @@ export function formatProbeTable(
 
   lines.push("─".repeat(72));
   const ipSummary = uniqueIps
-    .map((u) => `${u.ip}${u.location ? ` (${u.location})` : ""}`)
+    .map((u) => `${u.ip}${u.location ? ` (${flagEmoji(u.location)} ${u.location})` : ""}`)
     .join(", ");
 
   lines.push(
@@ -78,9 +79,11 @@ export function formatIpSummaryTable(
   lines.push(bold("🌐 IP Summary", opts));
   for (const u of uniqueIps) {
     const d = u.detail;
-    const loc = d
+    const rawLoc = d
       ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
       : u.location ?? "—";
+    const locCode = d?.countryCode ?? u.location;
+    const loc = rawLoc !== "—" ? `${flagEmoji(locCode)} ${rawLoc}` : "—";
     const isp = d?.isp ?? "—";
     const asn = d?.asn ? `AS${d.asn}` : "";
     lines.push(

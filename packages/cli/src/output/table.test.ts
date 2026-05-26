@@ -26,7 +26,7 @@ describe("formatProbeTable", () => {
     const output = formatProbeTable(entries, uniqueIps, { noColor: true });
     expect(output).toContain("✓ anthropic");
     expect(output).toContain("203.0.113.42");
-    expect(output).toContain("HK");
+    expect(output).toContain("🇭🇰 HK");
     expect(output).toContain("HKG");
     expect(output).toContain("45ms");
     const headerLine = output.split("\n").find((l) => l.includes("Endpoint"));

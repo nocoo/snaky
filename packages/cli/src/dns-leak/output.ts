@@ -1,3 +1,4 @@
+import { flagEmoji } from "../utils/flag-emoji.js";
 import type { DnsLeakOutput } from "./types.js";
 
 export function formatDnsLeakTable(output: DnsLeakOutput): string {
@@ -18,7 +19,7 @@ export function formatDnsLeakTable(output: DnsLeakOutput): string {
   }
 
   if (output.userIp) {
-    const loc = output.userCountryCode ? ` (${output.userCountryCode})` : "";
+    const loc = output.userCountryCode ? ` (${flagEmoji(output.userCountryCode)} ${output.userCountryCode})` : "";
     lines.push(`Your IP: ${output.userIp}${loc}`);
   }
 
@@ -31,9 +32,10 @@ export function formatDnsLeakTable(output: DnsLeakOutput): string {
     const num = String(i + 1).padEnd(2);
     const ip = s.ip.padEnd(17);
     const isp = (s.isp ?? "Unknown").slice(0, 16).padEnd(16);
-    const loc = (s.countryCode ?? "??").padEnd(11);
+    const loc = s.countryCode ? `${flagEmoji(s.countryCode)} ${s.countryCode}` : "??";
+    const locPad = loc.padEnd(s.countryCode ? 14 : 11);
     const status = s.leaked ? "⚠ LEAK" : "✓ OK";
-    lines.push(`${num} ${ip} ${isp} ${loc} ${status}`);
+    lines.push(`${num} ${ip} ${isp} ${locPad} ${status}`);
   }
 
   lines.push("");
