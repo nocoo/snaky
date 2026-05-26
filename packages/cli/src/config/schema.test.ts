@@ -406,4 +406,69 @@ describe("validateConfig", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors[0]).toMatch(/openai.*tier/i);
   });
+
+  describe("dnsLeak", () => {
+    it("accepts valid dnsLeak config", () => {
+      const result = validateConfig({
+        dnsLeak: { rounds: 5, expectedResolvers: ["1.1.1.0/24", "8.8.8.8"] },
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts dnsLeak with only rounds", () => {
+      const result = validateConfig({ dnsLeak: { rounds: 10 } });
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts empty dnsLeak object", () => {
+      const result = validateConfig({ dnsLeak: {} });
+      expect(result.ok).toBe(true);
+    });
+
+    it("rejects dnsLeak.rounds below minimum", () => {
+      const result = validateConfig({ dnsLeak: { rounds: 0 } });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/dnsLeak\.rounds/);
+    });
+
+    it("rejects dnsLeak.rounds above maximum", () => {
+      const result = validateConfig({ dnsLeak: { rounds: 21 } });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/dnsLeak\.rounds/);
+    });
+
+    it("rejects non-integer dnsLeak.rounds", () => {
+      const result = validateConfig({ dnsLeak: { rounds: 2.5 } });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/dnsLeak\.rounds/);
+    });
+
+    it("rejects non-array expectedResolvers", () => {
+      const result = validateConfig({ dnsLeak: { expectedResolvers: "1.1.1.0/24" } });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/expectedResolvers must be an array/);
+    });
+
+    it("rejects invalid CIDR in expectedResolvers", () => {
+      const result = validateConfig({
+        dnsLeak: { expectedResolvers: ["1.1.1.0/24", "not-a-cidr"] },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/invalid CIDR/);
+    });
+
+    it("rejects CIDR with prefix > 32", () => {
+      const result = validateConfig({
+        dnsLeak: { expectedResolvers: ["1.1.1.0/33"] },
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/invalid CIDR/);
+    });
+
+    it("rejects dnsLeak that is not an object", () => {
+      const result = validateConfig({ dnsLeak: "bad" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.errors[0]).toMatch(/dnsLeak must be an object/);
+    });
+  });
 });

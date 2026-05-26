@@ -157,4 +157,35 @@ describe("loadConfig", () => {
     );
     expect(github).toBeDefined();
   });
+
+  it("provides dnsLeak defaults when not in config", () => {
+    const result = loadConfig(undefined);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.dnsLeak.rounds).toBe(5);
+    expect(result.config.dnsLeak.expectedResolvers).toBeUndefined();
+  });
+
+  it("merges partial dnsLeak config", () => {
+    const configPath = join(dir, "config.json");
+    writeFileSync(configPath, JSON.stringify({ dnsLeak: { rounds: 8 } }));
+    const result = loadConfig(configPath);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.dnsLeak.rounds).toBe(8);
+    expect(result.config.dnsLeak.expectedResolvers).toBeUndefined();
+  });
+
+  it("merges dnsLeak with expectedResolvers", () => {
+    const configPath = join(dir, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({ dnsLeak: { rounds: 3, expectedResolvers: ["1.1.1.0/24"] } }),
+    );
+    const result = loadConfig(configPath);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.config.dnsLeak.rounds).toBe(3);
+    expect(result.config.dnsLeak.expectedResolvers).toEqual(["1.1.1.0/24"]);
+  });
 });

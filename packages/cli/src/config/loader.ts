@@ -2,13 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./builtins.js";
 import { validateConfig } from "./schema.js";
 import type {
+  DnsLeakConfig,
   EffectiveConfig,
   Endpoint,
   PingTarget,
   RawConfig,
   Settings,
 } from "./types.js";
-import { DEFAULT_SETTINGS as DEFAULTS } from "./types.js";
+import { DEFAULT_DNS_LEAK, DEFAULT_SETTINGS as DEFAULTS } from "./types.js";
 
 export type LoadSuccess = {
   ok: true;
@@ -55,6 +56,14 @@ export function loadConfig(path?: string): LoadResult {
     retries: (raw.retries as number) ?? DEFAULTS.retries,
     pingRounds: (raw.pingRounds as number) ?? DEFAULTS.pingRounds,
     tier: (raw.tier as number) ?? DEFAULTS.tier,
+  };
+
+  const rawDnsLeak = raw.dnsLeak;
+  const dnsLeak: DnsLeakConfig = {
+    rounds: (rawDnsLeak?.rounds as number) ?? DEFAULT_DNS_LEAK.rounds,
+    ...(rawDnsLeak?.expectedResolvers
+      ? { expectedResolvers: rawDnsLeak.expectedResolvers as string[] }
+      : {}),
   };
 
   const userEndpoints = raw.endpoints ?? [];
@@ -125,5 +134,5 @@ export function loadConfig(path?: string): LoadResult {
     pingTargets.push(pt);
   }
 
-  return { ok: true, config: { endpoints, pingTargets, settings }, warnings };
+  return { ok: true, config: { endpoints, pingTargets, settings, dnsLeak }, warnings };
 }

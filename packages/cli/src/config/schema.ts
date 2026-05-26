@@ -19,6 +19,7 @@ const KNOWN_KEYS = new Set([
   "retries",
   "pingRounds",
   "tier",
+  "dnsLeak",
 ]);
 
 export type ValidationSuccess = {
@@ -62,6 +63,10 @@ export function validateConfig(raw: Record<string, unknown>): ValidationResult {
     validateInt(raw.tier, "tier", 1, 9, errors);
   }
 
+  if ("dnsLeak" in raw) {
+    validateDnsLeak(raw.dnsLeak, errors);
+  }
+
   const allNames = new Set<string>();
 
   if ("endpoints" in raw) {
@@ -101,6 +106,45 @@ function validateInt(
   }
   if (value < min || value > max) {
     errors.push(`${field} must be between ${min} and ${max}`);
+  }
+}
+
+const CIDR_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(\/(\d{1,2}))?$/;
+
+function isValidCidr(value: string): boolean {
+  const m = CIDR_RE.exec(value);
+  if (!m) return false;
+  const octets = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  if (octets.some((o) => o > 255)) return false;
+  if (m[6] !== undefined) {
+    const prefix = Number(m[6]);
+    if (prefix > 32) return false;
+  }
+  return true;
+}
+
+function validateDnsLeak(
+  value: unknown,
+  errors: string[],
+): void {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    errors.push("dnsLeak must be an object");
+    return;
+  }
+  const obj = value as Record<string, unknown>;
+  if ("rounds" in obj) {
+    validateInt(obj.rounds, "dnsLeak.rounds", 1, 20, errors);
+  }
+  if ("expectedResolvers" in obj) {
+    if (!Array.isArray(obj.expectedResolvers)) {
+      errors.push("dnsLeak.expectedResolvers must be an array");
+    } else {
+      for (const entry of obj.expectedResolvers) {
+        if (typeof entry !== "string" || !isValidCidr(entry)) {
+          errors.push(`dnsLeak.expectedResolvers: invalid CIDR "${entry}"`);
+        }
+      }
+    }
   }
 }
 

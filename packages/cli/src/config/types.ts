@@ -74,13 +74,23 @@ export type RawConfig = {
   retries?: number;
   pingRounds?: number;
   tier?: number;
+  dnsLeak?: {
+    rounds?: number;
+    expectedResolvers?: string[];
+  };
   [key: string]: unknown;
+};
+
+export type DnsLeakConfig = {
+  rounds: number;
+  expectedResolvers?: string[];
 };
 
 export type EffectiveConfig = {
   endpoints: Endpoint[];
   pingTargets: PingTarget[];
   settings: Settings;
+  dnsLeak: DnsLeakConfig;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -90,4 +100,8 @@ export const DEFAULT_SETTINGS: Settings = {
   retries: 2,
   pingRounds: 12,
   tier: 1,
+};
+
+export const DEFAULT_DNS_LEAK: DnsLeakConfig = {
+  rounds: 5,
 };
