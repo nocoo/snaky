@@ -75,18 +75,18 @@ public final class AppViewModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 switch partial {
                 case .ping(.success(let output)):
-                    ping = output.ping
+                    ping = output.connect
                 case .ping(.failure(let error)):
                     pingError = error
                 case .probe(.success(let output)):
-                    probe = output.probe
+                    probe = output.split
                     ipDetails = output.ipDetails
                 case .probe(.failure(let error)):
                     probeError = error
                 }
 
                 if ping != nil || probe != nil {
-                    let merged = FullOutput(mode: .all, probe: probe, ping: ping, ipDetails: ipDetails)
+                    let merged = FullOutput(mode: .all, split: probe, connect: ping, dns: nil, ipDetails: ipDetails)
                     previousResult = merged
                     lastUpdated = Date()
                     state = .success(merged)
@@ -111,7 +111,7 @@ public final class AppViewModel: ObservableObject {
 
     private nonisolated func fetchPing() async -> PartialResult {
         do {
-            return .ping(.success(try await bridge.invoke(mode: "ping")))
+            return .ping(.success(try await bridge.invoke(mode: "connect")))
         } catch let error as CLIError {
             return .ping(.failure(error))
         } catch {
@@ -121,7 +121,7 @@ public final class AppViewModel: ObservableObject {
 
     private nonisolated func fetchProbe() async -> PartialResult {
         do {
-            return .probe(.success(try await bridge.invoke(mode: "probe", tier: 2)))
+            return .probe(.success(try await bridge.invoke(mode: "split", tier: 2)))
         } catch let error as CLIError {
             return .probe(.failure(error))
         } catch {

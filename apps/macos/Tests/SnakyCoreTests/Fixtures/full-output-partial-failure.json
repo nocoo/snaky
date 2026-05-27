@@ -1,6 +1,6 @@
 {
   "mode": "all",
-  "probe": {
+  "split": {
     "results": [
       {
         "name": "anthropic",
@@ -50,7 +50,7 @@
       { "ip": "104.18.32.7", "location": "JP", "count": 1 }
     ]
   },
-  "ping": {
+  "connect": {
     "results": [
       {
         "name": "ping-broken",
@@ -71,5 +71,6 @@
         "rounds": [130, -1, 120, -1, 110]
       }
     ]
-  }
+  },
+  "dns": null
 }

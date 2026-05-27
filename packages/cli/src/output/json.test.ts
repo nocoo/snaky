@@ -3,10 +3,10 @@ import { formatJson } from "./json.js";
 import type { FullOutput } from "./types.js";
 
 describe("formatJson", () => {
-  it("serializes mode=all with both sections", () => {
+  it("serializes mode=all with all sections", () => {
     const output: FullOutput = {
       mode: "all",
-      probe: {
+      split: {
         results: [
           {
             name: "openai",
@@ -24,7 +24,7 @@ describe("formatJson", () => {
         summary: { total: 1, succeeded: 1, failed: 0 },
         uniqueIps: [{ ip: "203.0.113.42", location: "HK", count: 1 }],
       },
-      ping: {
+      connect: {
         results: [
           {
             name: "ping-github",
@@ -35,52 +35,56 @@ describe("formatJson", () => {
           },
         ],
       },
+      dns: null,
     };
 
     const json = formatJson(output);
     const parsed = JSON.parse(json);
     expect(parsed.mode).toBe("all");
-    expect(parsed.probe.results).toHaveLength(1);
-    expect(parsed.probe.results[0].name).toBe("openai");
-    expect(parsed.ping.results).toHaveLength(1);
+    expect(parsed.split.results).toHaveLength(1);
+    expect(parsed.split.results[0].name).toBe("openai");
+    expect(parsed.connect.results).toHaveLength(1);
+    expect(parsed.dns).toBeNull();
   });
 
-  it("serializes mode=probe with ping=null", () => {
+  it("serializes mode=split with connect=null", () => {
     const output: FullOutput = {
-      mode: "probe",
-      probe: {
+      mode: "split",
+      split: {
         results: [],
         summary: { total: 0, succeeded: 0, failed: 0 },
         uniqueIps: [],
       },
-      ping: null,
+      connect: null,
+      dns: null,
     };
 
     const json = formatJson(output);
     const parsed = JSON.parse(json);
-    expect(parsed.mode).toBe("probe");
-    expect(parsed.probe).toBeDefined();
-    expect(parsed.ping).toBeNull();
+    expect(parsed.mode).toBe("split");
+    expect(parsed.split).toBeDefined();
+    expect(parsed.connect).toBeNull();
   });
 
-  it("serializes mode=ping with probe=null", () => {
+  it("serializes mode=connect with split=null", () => {
     const output: FullOutput = {
-      mode: "ping",
-      probe: null,
-      ping: { results: [] },
+      mode: "connect",
+      split: null,
+      connect: { results: [] },
+      dns: null,
     };
 
     const json = formatJson(output);
     const parsed = JSON.parse(json);
-    expect(parsed.mode).toBe("ping");
-    expect(parsed.probe).toBeNull();
-    expect(parsed.ping).toBeDefined();
+    expect(parsed.mode).toBe("connect");
+    expect(parsed.split).toBeNull();
+    expect(parsed.connect).toBeDefined();
   });
 
   it("includes error object and responseTimeMs: null for connection-level failures", () => {
     const output: FullOutput = {
-      mode: "probe",
-      probe: {
+      mode: "split",
+      split: {
         results: [
           {
             name: "bad",
@@ -96,21 +100,22 @@ describe("formatJson", () => {
         summary: { total: 1, succeeded: 0, failed: 1 },
         uniqueIps: [],
       },
-      ping: null,
+      connect: null,
+      dns: null,
     };
 
     const json = formatJson(output);
     const parsed = JSON.parse(json);
-    expect(parsed.probe.results[0].responseTimeMs).toBeNull();
-    expect(parsed.probe.results[0].error.code).toBe("DNS_FAILED");
-    expect(parsed.probe.results[0].error.message).toBe("DNS failed");
-    expect(parsed.probe.results[0].code).toBeUndefined();
+    expect(parsed.split.results[0].responseTimeMs).toBeNull();
+    expect(parsed.split.results[0].error.code).toBe("DNS_FAILED");
+    expect(parsed.split.results[0].error.message).toBe("DNS failed");
+    expect(parsed.split.results[0].code).toBeUndefined();
   });
 
   it("includes resolvedTarget when fallback used", () => {
     const output: FullOutput = {
-      mode: "probe",
-      probe: {
+      mode: "split",
+      split: {
         results: [
           {
             name: "discord",
@@ -129,24 +134,26 @@ describe("formatJson", () => {
         summary: { total: 1, succeeded: 1, failed: 0 },
         uniqueIps: [{ ip: "1.2.3.4", location: "US", count: 1 }],
       },
-      ping: null,
+      connect: null,
+      dns: null,
     };
 
     const json = formatJson(output);
     const parsed = JSON.parse(json);
-    expect(parsed.probe.results[0].resolvedTarget).toBe("gateway.discord.gg");
-    expect(parsed.probe.results[0].usedFallback).toBe(true);
+    expect(parsed.split.results[0].resolvedTarget).toBe("gateway.discord.gg");
+    expect(parsed.split.results[0].usedFallback).toBe(true);
   });
 
   it("outputs valid JSON string", () => {
     const output: FullOutput = {
       mode: "all",
-      probe: {
+      split: {
         results: [],
         summary: { total: 0, succeeded: 0, failed: 0 },
         uniqueIps: [],
       },
-      ping: { results: [] },
+      connect: { results: [] },
+      dns: null,
     };
 
     const json = formatJson(output);

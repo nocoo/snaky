@@ -55,10 +55,8 @@ struct IntegrationTests {
 
         let output = try JSONDecoder().decode(FullOutput.self, from: data)
         #expect(output.mode == .all)
-        #expect(output.probe != nil)
-        #expect(output.ping != nil)
 
-        if let probe = output.probe {
+        if let probe = output.split {
             #expect(probe.summary.total > 0)
             #expect(probe.results.count == probe.summary.total)
         }

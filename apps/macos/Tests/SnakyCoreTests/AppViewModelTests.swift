@@ -16,12 +16,13 @@ struct AppViewModelTests {
     private static func makeOutput(mode: RunMode = .all) -> FullOutput {
         FullOutput(
             mode: mode,
-            probe: ProbeOutput(
+            split: ProbeOutput(
                 results: [],
                 summary: ProbeSummary(total: 0, succeeded: 0, failed: 0),
                 uniqueIps: []
             ),
-            ping: PingOutput(results: []),
+            connect: PingOutput(results: []),
+            dns: nil,
             ipDetails: nil
         )
     }

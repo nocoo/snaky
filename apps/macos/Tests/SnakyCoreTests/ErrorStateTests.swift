@@ -8,7 +8,7 @@ struct ErrorStateTests {
     private static func makeOutput() -> FullOutput {
         FullOutput(
             mode: .all,
-            probe: ProbeOutput(
+            split: ProbeOutput(
                 results: [
                     ProbeEntry(
                         name: "test",
@@ -28,7 +28,8 @@ struct ErrorStateTests {
                 summary: ProbeSummary(total: 1, succeeded: 1, failed: 0),
                 uniqueIps: [UniqueIp(ip: "1.2.3.4", location: "JP", count: 1, detail: nil)]
             ),
-            ping: PingOutput(results: []),
+            connect: PingOutput(results: []),
+            dns: nil,
             ipDetails: nil
         )
     }

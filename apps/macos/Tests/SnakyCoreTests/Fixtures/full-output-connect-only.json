@@ -1,7 +1,7 @@
 {
-  "mode": "ping",
-  "probe": null,
-  "ping": {
+  "mode": "connect",
+  "split": null,
+  "connect": {
     "results": [
       {
         "name": "ping-github",
@@ -18,5 +18,6 @@
         "rounds": [142, 60, 59, 61, 58]
       }
     ]
-  }
+  },
+  "dns": null
 }

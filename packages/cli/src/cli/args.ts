@@ -2,7 +2,7 @@ import { parseArgs as nodeParseArgs } from "node:util";
 
 export type RunCommand = {
   type: "run";
-  mode: "all" | "probe" | "ping";
+  mode: "all" | "connect" | "split";
   names?: string[];
 };
 
@@ -20,8 +20,8 @@ export type NameCommand = {
   name: string;
 };
 
-export type DnsLeakCommand = {
-  type: "dns-leak";
+export type DnsCommand = {
+  type: "dns";
   rounds?: number;
   extended: boolean;
 };
@@ -30,7 +30,7 @@ export type SimpleCommand = {
   type: "list" | "config-path" | "config-show" | "config-init" | "version" | "help";
 };
 
-export type Command = RunCommand | AddCommand | NameCommand | DnsLeakCommand | SimpleCommand;
+export type Command = RunCommand | AddCommand | NameCommand | DnsCommand | SimpleCommand;
 
 export type Flags = {
   json: boolean;
@@ -131,20 +131,20 @@ export function parseCliArgs(argv: string[]): ParseResult {
   }
 
   switch (sub) {
-    case "probe": {
+    case "split": {
       const names = positionals.slice(1);
       return {
         ok: true,
         command: {
           type: "run",
-          mode: "probe",
+          mode: "split",
           names: names.length > 0 ? names : undefined,
         },
         flags,
       };
     }
-    case "ping":
-      return { ok: true, command: { type: "run", mode: "ping" }, flags };
+    case "connect":
+      return { ok: true, command: { type: "run", mode: "connect" }, flags };
     case "list":
       return { ok: true, command: { type: "list" }, flags };
     case "add":
@@ -164,8 +164,8 @@ export function parseCliArgs(argv: string[]): ParseResult {
       if (!name) return { ok: false, error: "enable requires a name" };
       return { ok: true, command: { type: "enable", name }, flags };
     }
-    case "dns-leak":
-      return parseDnsLeak(parsed.values as Record<string, unknown>, flags);
+    case "dns":
+      return parseDns(parsed.values as Record<string, unknown>, flags);
     case "config": {
       const subCmd = positionals[1];
       if (subCmd === "path") return { ok: true, command: { type: "config-path" }, flags };
@@ -231,7 +231,7 @@ function parseAdd(
   return { ok: false, error: "add requires a domain or --method" };
 }
 
-function parseDnsLeak(
+function parseDns(
   values: Record<string, unknown>,
   flags: Flags,
 ): ParseResult {
@@ -244,14 +244,14 @@ function parseDnsLeak(
     }
     return {
       ok: true,
-      command: { type: "dns-leak", rounds: v, extended },
+      command: { type: "dns", rounds: v, extended },
       flags,
     };
   }
 
   return {
     ok: true,
-    command: { type: "dns-leak", extended },
+    command: { type: "dns", extended },
     flags,
   };
 }

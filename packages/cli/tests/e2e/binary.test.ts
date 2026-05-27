@@ -56,9 +56,9 @@ describe("CLI binary E2E", () => {
     expect(stderr).toContain("Unknown command");
   });
 
-  it("probe with nonexistent name exits 3", async () => {
+  it("split with nonexistent name exits 3", async () => {
     const { exitCode, stderr } = await run([
-      "probe", "this-does-not-exist-xyz",
+      "split", "this-does-not-exist-xyz",
       "--timeout", "1000",
     ]);
     expect(exitCode).toBe(3);
@@ -125,7 +125,7 @@ describe("CLI with mock server", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("probe --json produces valid JSON", async () => {
+  it("split --json produces valid JSON", async () => {
     const testConfig = join(dir, "probe-config.json");
     writeFileSync(
       testConfig,
@@ -144,17 +144,17 @@ describe("CLI with mock server", () => {
     );
 
     const { stdout, exitCode } = await run([
-      "probe", "test-header", "--json",
+      "split", "test-header", "--json",
       "--config", testConfig,
     ]);
     // Connection refused → all fail → exit 2, but JSON must be valid
     expect(exitCode).toBe(2);
     expect(() => JSON.parse(stdout)).not.toThrow();
     const parsed = JSON.parse(stdout);
-    expect(parsed.mode).toBe("probe");
-    expect(parsed.probe.results).toHaveLength(1);
-    expect(parsed.probe.results[0].ok).toBe(false);
-    expect(parsed.probe.results[0].error.code).toBeDefined();
+    expect(parsed.mode).toBe("split");
+    expect(parsed.split.results).toHaveLength(1);
+    expect(parsed.split.results[0].ok).toBe(false);
+    expect(parsed.split.results[0].error.code).toBeDefined();
   });
 
   it("config show with custom config path", async () => {
@@ -234,7 +234,7 @@ describe("CLI with mock server", () => {
     );
 
     const { stdout } = await run([
-      "probe", "ansi-test", "--json",
+      "split", "ansi-test", "--json",
       "--config", testConfig,
     ]);
     // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally testing for ANSI escapes
@@ -242,7 +242,7 @@ describe("CLI with mock server", () => {
     expect(() => JSON.parse(stdout)).not.toThrow();
   });
 
-  it("--json schema has mode, probe, ping fields", { timeout: 15000 }, async () => {
+  it("--json schema has mode, split, connect, dns fields", { timeout: 15000 }, async () => {
     const testConfig = join(dir, "schema-test.json");
     writeFileSync(
       testConfig,
@@ -270,15 +270,16 @@ describe("CLI with mock server", () => {
     ]);
     const parsed = JSON.parse(stdout);
     expect(parsed).toHaveProperty("mode", "all");
-    expect(parsed).toHaveProperty("probe");
-    expect(parsed).toHaveProperty("ping");
-    expect(parsed.probe).toHaveProperty("results");
-    expect(parsed.probe).toHaveProperty("summary");
-    expect(parsed.probe).toHaveProperty("uniqueIps");
-    expect(parsed.probe.summary).toHaveProperty("total");
-    expect(parsed.probe.summary).toHaveProperty("succeeded");
-    expect(parsed.probe.summary).toHaveProperty("failed");
-    expect(parsed.ping).toHaveProperty("results");
+    expect(parsed).toHaveProperty("split");
+    expect(parsed).toHaveProperty("connect");
+    expect(parsed).toHaveProperty("dns");
+    expect(parsed.split).toHaveProperty("results");
+    expect(parsed.split).toHaveProperty("summary");
+    expect(parsed.split).toHaveProperty("uniqueIps");
+    expect(parsed.split.summary).toHaveProperty("total");
+    expect(parsed.split.summary).toHaveProperty("succeeded");
+    expect(parsed.split.summary).toHaveProperty("failed");
+    expect(parsed.connect).toHaveProperty("results");
   });
 
   it("--tier filters endpoints in json output", { timeout: 15000 }, async () => {
@@ -309,23 +310,23 @@ describe("CLI with mock server", () => {
       }),
     );
 
-    // Only probe the named endpoints to avoid hitting builtins
+    // Only split the named endpoints to avoid hitting builtins
     const { stdout: stdout1 } = await run([
-      "probe", "tier1-ep", "--json",
+      "split", "tier1-ep", "--json",
       "--config", testConfig,
       "--tier", "1",
     ]);
     const parsed1 = JSON.parse(stdout1);
 
     const { stdout: stdout2 } = await run([
-      "probe", "tier1-ep", "tier2-ep", "--json",
+      "split", "tier1-ep", "tier2-ep", "--json",
       "--config", testConfig,
       "--tier", "2",
     ]);
     const parsed2 = JSON.parse(stdout2);
 
-    expect(parsed1.probe.results).toHaveLength(1);
-    expect(parsed1.probe.results[0].name).toBe("tier1-ep");
-    expect(parsed2.probe.results).toHaveLength(2);
+    expect(parsed1.split.results).toHaveLength(1);
+    expect(parsed1.split.results[0].name).toBe("tier1-ep");
+    expect(parsed2.split.results).toHaveLength(2);
   });
 });

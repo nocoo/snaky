@@ -2,14 +2,16 @@ import Foundation
 
 public enum RunMode: String, Codable, Sendable {
     case all
-    case probe
-    case ping
+    case connect
+    case split
+    case dns
 }
 
 public struct FullOutput: Codable, Sendable, Equatable {
     public let mode: RunMode
-    public let probe: ProbeOutput?
-    public let ping: PingOutput?
+    public let split: ProbeOutput?
+    public let connect: PingOutput?
+    public let dns: DnsLeakOutput?
     public let ipDetails: [IpDetail]?
 }
 

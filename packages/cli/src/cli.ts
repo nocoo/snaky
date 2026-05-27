@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { AddCommand, DnsLeakCommand, NameCommand, RunCommand } from "./cli/args.js";
+import type { AddCommand, DnsCommand, NameCommand, RunCommand } from "./cli/args.js";
 import { parseCliArgs } from "./cli/args.js";
 import { computeExitCode } from "./cli/exit-code.js";
 import { BUILTIN_ENDPOINTS, BUILTIN_PING_TARGETS } from "./config/builtins.js";
@@ -89,8 +89,8 @@ export async function main(argv: string[]): Promise<number> {
     return handleMutate(command, configPath);
   }
 
-  if (command.type === "dns-leak") {
-    return handleDnsLeak(command, flags, configPath);
+  if (command.type === "dns") {
+    return handleDns(command, flags, configPath);
   }
 
   if (command.type === "run") {
@@ -224,8 +224,9 @@ async function handleRun(
   let probeEntries: ProbeEntry[] | null = null;
   let pingResults: import("./runner/ping-runner.js").PingResult[] | null = null;
 
-  const shouldProbe = command.mode === "all" || command.mode === "probe";
-  const shouldPing = command.mode === "all" || command.mode === "ping";
+  const shouldProbe = command.mode === "all" || command.mode === "split";
+  const shouldPing = command.mode === "all" || command.mode === "connect";
+  const shouldDns = command.mode === "all";
 
   // Resolve endpoints (synchronous validation — may exit 3)
   let endpoints: Endpoint[] = [];
@@ -267,6 +268,7 @@ async function handleRun(
     const live = startLiveRenderer(
       shouldProbe ? endpoints.map((e) => e.name) : [],
       pingTargets.map((t) => t.name),
+      shouldDns,
     );
     liveCallbacks = await live.callbacks;
     liveUnmount = live.unmount;
@@ -351,8 +353,26 @@ async function handleRun(
       })
     : null;
 
+  const secrets = loadSecrets();
+
+  const dnsTask = shouldDns
+    ? (async () => {
+        const rounds = config.dnsLeak.rounds;
+        const { output, exitCode } = await runDnsLeakDetection({
+          rounds,
+          expectedResolvers: config.dnsLeak.expectedResolvers,
+          echoApiKey: secrets.echoApiKey,
+          onProgress: liveCallbacks
+            ? (msg) => liveCallbacks?.setDnsProgress(msg)
+            : undefined,
+        });
+        return { output, exitCode };
+      })()
+    : null;
+
   // Execute concurrently
   [probeResults, pingResults] = await Promise.all([probeTask, pingTask]);
+  const dnsResult = await dnsTask;
 
   if (liveCallbacks) {
     liveCallbacks.setComplete();
@@ -377,7 +397,6 @@ async function handleRun(
   let ipDetails: IpDetail[] | undefined;
 
   if (probeResults && uniqueIps.length > 0) {
-    const secrets = loadSecrets();
     if (secrets.echoApiKey) {
       const enrichSpinner = useLiveTui ? startSpinner("Enriching IP details...") : null;
       const ips = uniqueIps.map((u) => u.ip);
@@ -398,7 +417,7 @@ async function handleRun(
   if (flags.json) {
     const output: FullOutput = {
       mode,
-      probe: probeEntries
+      split: probeEntries
         ? {
             results: probeEntries,
             summary: {
@@ -409,13 +428,17 @@ async function handleRun(
             uniqueIps,
           }
         : null,
-      ping: pingResults ? { results: pingResults } : null,
+      connect: pingResults ? { results: pingResults } : null,
+      dns: dnsResult?.output ?? null,
       ...(ipDetails ? { ipDetails } : {}),
     };
     process.stdout.write(`${formatJson(output)}\n`);
   } else if (useLiveTui) {
     const ipTable = formatIpSummaryTable(uniqueIps);
     if (ipTable) process.stdout.write(`\n${ipTable}\n`);
+    if (dnsResult) {
+      process.stdout.write(`${formatDnsLeakTable(dnsResult.output)}\n`);
+    }
   } else {
     if (pingResults) {
       process.stdout.write(formatPingTable(pingResults, { noColor: flags.noColor }));
@@ -426,13 +449,17 @@ async function handleRun(
         formatProbeTable(probeEntries, uniqueIps, { noColor: flags.noColor }),
       );
     }
+    if (dnsResult) {
+      if (probeEntries || pingResults) process.stdout.write("\n");
+      process.stdout.write(`${formatDnsLeakTable(dnsResult.output)}\n`);
+    }
   }
 
   return computeExitCode(mode, probeResults, pingResults);
 }
 
-async function handleDnsLeak(
-  command: DnsLeakCommand,
+async function handleDns(
+  command: DnsCommand,
   flags: { json?: boolean; config?: string },
   configPath: string,
 ): Promise<number> {
@@ -474,10 +501,10 @@ function printHelp(): void {
   process.stdout.write(`Usage: snaky [command] [options]
 
 Commands:
-  (none)              Run all: probe + ping
-  probe [name...]     Probe specific endpoints (IP detection)
-  ping                Connectivity test only (latency)
-  dns-leak            DNS leak detection test
+  (none)              Run all: connect + split + dns
+  connect             Connectivity test (latency)
+  split [name...]     Split tunnel probe (IP detection)
+  dns                 DNS leak detection
   list                List all endpoints
   add <name> <domain> Add cftrace endpoint
   remove <name>       Remove an endpoint

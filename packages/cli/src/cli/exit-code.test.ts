@@ -30,7 +30,7 @@ describe("computeExitCode", () => {
 
   it("returns 0 for empty probes (no endpoints)", () => {
     expect(computeExitCode("all", [], [])).toBe(0);
-    expect(computeExitCode("probe", [], null)).toBe(0);
+    expect(computeExitCode("split", [], null)).toBe(0);
   });
 
   it("ping failures do not affect exit code in all mode", () => {
@@ -43,25 +43,25 @@ describe("computeExitCode", () => {
     expect(computeExitCode("all", probes, pings)).toBe(0);
   });
 
-  it("ping-only mode: 0 = all reachable", () => {
+  it("connect-only mode: 0 = all reachable", () => {
     const pings: PingResult[] = [
       { name: "a", tag: "x", ok: true, medianMs: 50, rounds: [50] },
     ];
-    expect(computeExitCode("ping", null, pings)).toBe(0);
+    expect(computeExitCode("connect", null, pings)).toBe(0);
   });
 
-  it("ping-only mode: 1 = some unreachable", () => {
+  it("connect-only mode: 1 = some unreachable", () => {
     const pings: PingResult[] = [
       { name: "a", tag: "x", ok: true, medianMs: 50, rounds: [50] },
       { name: "b", tag: "x", ok: false, medianMs: null, rounds: [-1], error: { code: "ALL_FAILED", message: "all" } },
     ];
-    expect(computeExitCode("ping", null, pings)).toBe(1);
+    expect(computeExitCode("connect", null, pings)).toBe(1);
   });
 
-  it("ping-only mode: 2 = all unreachable", () => {
+  it("connect-only mode: 2 = all unreachable", () => {
     const pings: PingResult[] = [
       { name: "a", tag: "x", ok: false, medianMs: null, rounds: [-1], error: { code: "ALL_FAILED", message: "all" } },
     ];
-    expect(computeExitCode("ping", null, pings)).toBe(2);
+    expect(computeExitCode("connect", null, pings)).toBe(2);
   });
 });

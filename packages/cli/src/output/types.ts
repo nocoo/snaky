@@ -1,3 +1,4 @@
+import type { DnsLeakOutput } from "../dns-leak/types.js";
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
 import type { IpInfo } from "../services/echo.js";
@@ -43,11 +44,12 @@ export type PingSectionOutput = {
   results: PingResult[];
 };
 
-export type OutputMode = "all" | "probe" | "ping";
+export type OutputMode = "all" | "connect" | "split" | "dns";
 
 export type FullOutput = {
   mode: OutputMode;
-  probe: ProbeSectionOutput | null;
-  ping: PingSectionOutput | null;
+  split: ProbeSectionOutput | null;
+  connect: PingSectionOutput | null;
+  dns: DnsLeakOutput | null;
   ipDetails?: IpDetail[];
 };

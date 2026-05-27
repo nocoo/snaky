@@ -162,7 +162,7 @@ public struct CLIBridge: Sendable {
         guard let path = await discovery.discover() else {
             throw CLIError.notFound
         }
-        var args = ["dns-leak", "--json"]
+        var args = ["dns", "--json"]
         if extended {
             args.append("--extended")
         }

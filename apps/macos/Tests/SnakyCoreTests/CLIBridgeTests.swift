@@ -31,12 +31,13 @@ struct CLIBridgeTests {
         let json = """
         {
           "mode": "all",
-          "probe": {
+          "split": {
             "results": [],
             "summary": { "total": 0, "succeeded": 0, "failed": 0 },
             "uniqueIps": []
           },
-          "ping": { "results": [] }
+          "connect": { "results": [] },
+          "dns": null
         }
         """
         return Data(json.utf8)
@@ -79,8 +80,8 @@ struct CLIBridgeTests {
         let bridge = makeBridge(exitCode: 0)
         let result = try await bridge.invoke()
         #expect(result.mode == .all)
-        #expect(result.probe != nil)
-        #expect(result.ping != nil)
+        #expect(result.split != nil)
+        #expect(result.connect != nil)
     }
 
     @Test func bridgeExitCode1() async throws {

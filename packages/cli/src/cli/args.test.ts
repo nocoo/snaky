@@ -11,29 +11,29 @@ describe("parseCliArgs", () => {
     }
   });
 
-  it("probe with names", () => {
-    const result = parseCliArgs(["probe", "openai", "discord"]);
+  it("split with names", () => {
+    const result = parseCliArgs(["split", "openai", "discord"]);
     expect(result.ok).toBe(true);
     if (result.ok && result.command.type === "run") {
-      expect(result.command.mode).toBe("probe");
+      expect(result.command.mode).toBe("split");
       expect(result.command.names).toEqual(["openai", "discord"]);
     }
   });
 
-  it("probe without names → all probe endpoints", () => {
-    const result = parseCliArgs(["probe"]);
+  it("split without names → all split endpoints", () => {
+    const result = parseCliArgs(["split"]);
     expect(result.ok).toBe(true);
     if (result.ok && result.command.type === "run") {
-      expect(result.command.mode).toBe("probe");
+      expect(result.command.mode).toBe("split");
       expect(result.command.names).toBeUndefined();
     }
   });
 
-  it("ping", () => {
-    const result = parseCliArgs(["ping"]);
+  it("connect", () => {
+    const result = parseCliArgs(["connect"]);
     expect(result.ok).toBe(true);
     if (result.ok && result.command.type === "run") {
-      expect(result.command.mode).toBe("ping");
+      expect(result.command.mode).toBe("connect");
     }
   });
 
@@ -296,64 +296,64 @@ describe("parseCliArgs", () => {
     expect(result.ok).toBe(false);
   });
 
-  describe("dns-leak", () => {
-    it("basic dns-leak command", () => {
-      const result = parseCliArgs(["dns-leak"]);
+  describe("dns", () => {
+    it("basic dns command", () => {
+      const result = parseCliArgs(["dns"]);
       expect(result.ok).toBe(true);
-      if (result.ok && result.command.type === "dns-leak") {
+      if (result.ok && result.command.type === "dns") {
         expect(result.command.rounds).toBeUndefined();
         expect(result.command.extended).toBe(false);
       }
     });
 
     it("--rounds parses valid value", () => {
-      const result = parseCliArgs(["dns-leak", "--rounds", "8"]);
+      const result = parseCliArgs(["dns", "--rounds", "8"]);
       expect(result.ok).toBe(true);
-      if (result.ok && result.command.type === "dns-leak") {
+      if (result.ok && result.command.type === "dns") {
         expect(result.command.rounds).toBe(8);
       }
     });
 
     it("--rounds rejects 0", () => {
-      const result = parseCliArgs(["dns-leak", "--rounds", "0"]);
+      const result = parseCliArgs(["dns", "--rounds", "0"]);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatch(/--rounds/);
     });
 
     it("--rounds rejects value above 20", () => {
-      const result = parseCliArgs(["dns-leak", "--rounds", "21"]);
+      const result = parseCliArgs(["dns", "--rounds", "21"]);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatch(/1.*20/);
     });
 
     it("--rounds rejects non-integer", () => {
-      const result = parseCliArgs(["dns-leak", "--rounds", "2.5"]);
+      const result = parseCliArgs(["dns", "--rounds", "2.5"]);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatch(/--rounds/);
     });
 
     it("--extended flag", () => {
-      const result = parseCliArgs(["dns-leak", "--extended"]);
+      const result = parseCliArgs(["dns", "--extended"]);
       expect(result.ok).toBe(true);
-      if (result.ok && result.command.type === "dns-leak") {
+      if (result.ok && result.command.type === "dns") {
         expect(result.command.extended).toBe(true);
       }
     });
 
     it("--rounds takes precedence with --extended", () => {
-      const result = parseCliArgs(["dns-leak", "--rounds", "3", "--extended"]);
+      const result = parseCliArgs(["dns", "--rounds", "3", "--extended"]);
       expect(result.ok).toBe(true);
-      if (result.ok && result.command.type === "dns-leak") {
+      if (result.ok && result.command.type === "dns") {
         expect(result.command.rounds).toBe(3);
         expect(result.command.extended).toBe(true);
       }
     });
 
     it("works with global --json flag", () => {
-      const result = parseCliArgs(["dns-leak", "--json"]);
+      const result = parseCliArgs(["dns", "--json"]);
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.command.type).toBe("dns-leak");
+        expect(result.command.type).toBe("dns");
         expect(result.flags.json).toBe(true);
       }
     });

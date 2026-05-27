@@ -1,6 +1,6 @@
 {
   "mode": "all",
-  "probe": {
+  "split": {
     "results": [
       {
         "name": "anthropic",
@@ -37,7 +37,7 @@
       { "ip": "167.220.233.44", "location": null, "count": 1 }
     ]
   },
-  "ping": {
+  "connect": {
     "results": [
       {
         "name": "ping-cloudflare",
@@ -47,5 +47,6 @@
         "rounds": [60, 52, 51, 53, 50]
       }
     ]
-  }
+  },
+  "dns": null
 }

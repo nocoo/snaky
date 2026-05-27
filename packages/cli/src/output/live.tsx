@@ -11,6 +11,7 @@ type PingSlot = { status: "pending" | "done"; result?: PingResult };
 type AppProps = {
   probeNames: string[];
   pingNames: string[];
+  showDns: boolean;
   onReady: (callbacks: LiveCallbacks) => void;
 };
 
@@ -18,6 +19,7 @@ export type LiveCallbacks = {
   setProbeResult: (index: number, entry: ProbeEntry) => void;
   setPingResult: (index: number, result: PingResult) => void;
   setPingResults: (results: PingResult[]) => void;
+  setDnsProgress: (msg: string) => void;
   setComplete: () => void;
 };
 
@@ -90,7 +92,7 @@ function PingRow({ slot }: { slot: PingSlot }): React.ReactElement {
   );
 }
 
-function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
+function App({ probeNames, pingNames, showDns, onReady }: AppProps): React.ReactElement {
   const [probes, setProbes] = useState<ProbeSlot[]>(
     probeNames.map((name) => ({
       status: "pending",
@@ -102,6 +104,9 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
       status: "pending",
       result: { name } as unknown as PingResult,
     })),
+  );
+  const [dnsProgress, setDnsProgressState] = useState<string | null>(
+    showDns ? "Waiting..." : null,
   );
 
   React.useEffect(() => {
@@ -123,8 +128,11 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
       setPingResults(results) {
         setPings(results.map((r) => ({ status: "done", result: r })));
       },
+      setDnsProgress(msg) {
+        setDnsProgressState(msg);
+      },
       setComplete() {
-        // no-op, kept for interface compatibility
+        setDnsProgressState(null);
       },
     });
   }, [onReady]);
@@ -147,6 +155,11 @@ function App({ probeNames, pingNames, onReady }: AppProps): React.ReactElement {
           ))}
         </Box>
       )}
+      {dnsProgress !== null && (
+        <Box marginTop={1}>
+          <Spinner /><Text bold> 🛡️ DNS Leak: </Text><Text>{dnsProgress}</Text>
+        </Box>
+      )}
     </Box>
   );
 }
@@ -165,6 +178,7 @@ export type LiveRenderer = {
 export function startLiveRenderer(
   probeNames: string[],
   pingNames: string[],
+  showDns = false,
 ): LiveRenderer {
   let resolveCallbacks: (cbs: LiveCallbacks) => void;
   const callbacks = new Promise<LiveCallbacks>((resolve) => {
@@ -175,6 +189,7 @@ export function startLiveRenderer(
     <App
       probeNames={probeNames}
       pingNames={pingNames}
+      showDns={showDns}
       onReady={(cbs) => resolveCallbacks(cbs)}
     />,
   );

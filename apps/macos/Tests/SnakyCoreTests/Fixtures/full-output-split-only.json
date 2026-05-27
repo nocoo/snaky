@@ -1,6 +1,6 @@
 {
-  "mode": "probe",
-  "probe": {
+  "mode": "split",
+  "split": {
     "results": [
       {
         "name": "chatgpt",
@@ -24,5 +24,6 @@
       { "ip": "104.18.32.7", "location": "US", "count": 1 }
     ]
   },
-  "ping": null
+  "connect": null,
+  "dns": null
 }

@@ -139,13 +139,13 @@ public struct PopoverContentView: View {
 
     @ViewBuilder
     private func successView(_ output: FullOutput) -> some View {
-        if let ping = output.ping, !ping.results.isEmpty {
+        if let ping = output.connect, !ping.results.isEmpty {
             PingSection(results: ping.results, history: viewModel.pingHistory)
         }
-        if let probe = output.probe, !probe.uniqueIps.isEmpty {
+        if let probe = output.split, !probe.uniqueIps.isEmpty {
             UniqueIpSection(ips: deduplicatedIps(probe.uniqueIps))
         }
-        if let probe = output.probe, !probe.results.isEmpty {
+        if let probe = output.split, !probe.results.isEmpty {
             ProbeSection(
                 entries: probe.results,
                 enabledTargets: viewModel.enabledProbeTargets,
@@ -158,7 +158,7 @@ public struct PopoverContentView: View {
                 onToggle: viewModel.toggleProbeTarget
             )
         }
-        if output.ping?.results.isEmpty ?? true && output.probe == nil {
+        if output.connect?.results.isEmpty ?? true && output.split == nil {
             ContentUnavailableView(
                 "No Endpoints",
                 systemImage: "tray",
