@@ -202,6 +202,8 @@ async function handleRun(
     category?: string;
     tier?: number;
     config?: string;
+    rounds?: number;
+    extended?: boolean;
   },
   configPath: string,
 ): Promise<number> {
@@ -357,7 +359,9 @@ async function handleRun(
 
   const dnsTask = shouldDns
     ? (async () => {
-        const rounds = config.dnsLeak.rounds;
+        const rounds = flags.rounds
+          ?? (flags.extended ? 8 : undefined)
+          ?? config.dnsLeak.rounds;
         const { output, exitCode } = await runDnsLeakDetection({
           rounds,
           expectedResolvers: config.dnsLeak.expectedResolvers,
@@ -437,7 +441,7 @@ async function handleRun(
     const ipTable = formatIpSummaryTable(uniqueIps);
     if (ipTable) process.stdout.write(`\n${ipTable}\n`);
     if (dnsResult) {
-      process.stdout.write(`${formatDnsLeakTable(dnsResult.output)}\n`);
+      process.stdout.write(`${formatDnsLeakTable(dnsResult.output, { noColor: flags.noColor })}\n`);
     }
   } else {
     if (pingResults) {
@@ -451,7 +455,7 @@ async function handleRun(
     }
     if (dnsResult) {
       if (probeEntries || pingResults) process.stdout.write("\n");
-      process.stdout.write(`${formatDnsLeakTable(dnsResult.output)}\n`);
+      process.stdout.write(`${formatDnsLeakTable(dnsResult.output, { noColor: flags.noColor })}\n`);
     }
   }
 
@@ -460,7 +464,7 @@ async function handleRun(
 
 async function handleDns(
   command: DnsCommand,
-  flags: { json?: boolean; config?: string },
+  flags: { json?: boolean; noColor?: boolean; config?: string },
   configPath: string,
 ): Promise<number> {
   const loaded = loadConfig(existsSync(configPath) ? configPath : undefined);
@@ -491,7 +495,7 @@ async function handleDns(
   if (flags.json) {
     process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
-    process.stdout.write(`${formatDnsLeakTable(output)}\n`);
+    process.stdout.write(`${formatDnsLeakTable(output, { noColor: flags.noColor })}\n`);
   }
 
   return exitCode;
@@ -519,12 +523,14 @@ Options:
   --timeout <ms>      Per-endpoint timeout (default: 5000)
   --concurrency <n>   Max parallel requests (default: 10)
   --tier <n>          Max endpoint tier to include (default: 1)
-  --rounds <n>        DNS leak test rounds (default: 5, range: 1-20)
-  --extended          DNS leak extended test (8 rounds)
   --config <path>     Custom config file path
   --category <cat>    Filter by category
   --no-color          Disable colored output
   --version           Print version
   --help              Print this help
+
+DNS options (apply to dns command and all-mode):
+  --rounds <n>        DNS leak test rounds (default: 5, range: 1-20)
+  --extended          DNS leak extended test (8 rounds)
 `);
 }

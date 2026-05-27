@@ -40,6 +40,8 @@ export type Flags = {
   config?: string;
   category?: string;
   tier?: number;
+  rounds?: number;
+  extended?: boolean;
 };
 
 export type ParseSuccess = {
@@ -115,6 +117,16 @@ export function parseCliArgs(argv: string[]): ParseResult {
     }
     flags.tier = v;
   }
+  if (parsed.values.rounds) {
+    const v = Number(parsed.values.rounds as string);
+    if (!Number.isInteger(v) || v < 1 || v > 20) {
+      return { ok: false, error: "--rounds must be an integer between 1 and 20" };
+    }
+    flags.rounds = v;
+  }
+  if (parsed.values.extended) {
+    flags.extended = true;
+  }
 
   if (parsed.values.version) {
     return { ok: true, command: { type: "version" }, flags };
@@ -165,7 +177,7 @@ export function parseCliArgs(argv: string[]): ParseResult {
       return { ok: true, command: { type: "enable", name }, flags };
     }
     case "dns":
-      return parseDns(parsed.values as Record<string, unknown>, flags);
+      return parseDns(flags);
     case "config": {
       const subCmd = positionals[1];
       if (subCmd === "path") return { ok: true, command: { type: "config-path" }, flags };
@@ -231,27 +243,10 @@ function parseAdd(
   return { ok: false, error: "add requires a domain or --method" };
 }
 
-function parseDns(
-  values: Record<string, unknown>,
-  flags: Flags,
-): ParseResult {
-  const extended = values.extended as boolean;
-
-  if (values.rounds) {
-    const v = Number(values.rounds as string);
-    if (!Number.isInteger(v) || v < 1 || v > 20) {
-      return { ok: false, error: "--rounds must be an integer between 1 and 20" };
-    }
-    return {
-      ok: true,
-      command: { type: "dns", rounds: v, extended },
-      flags,
-    };
-  }
-
+function parseDns(flags: Flags): ParseResult {
   return {
     ok: true,
-    command: { type: "dns", extended },
+    command: { type: "dns", rounds: flags.rounds, extended: flags.extended ?? false },
     flags,
   };
 }

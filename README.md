@@ -75,9 +75,10 @@ npm install -g @nocoo/snaky
 
 | 命令 | 说明 |
 |------|------|
-| `snaky` | 运行全部：探测 + ping |
-| `snaky probe [name...]` | 探测指定端点的出口 IP |
-| `snaky ping` | 仅连接延迟测试 |
+| `snaky` | 运行全部：connect + split + dns |
+| `snaky connect` | 连接延迟测试 |
+| `snaky split [name...]` | 分流探测（出口 IP 检测） |
+| `snaky dns` | DNS 泄漏检测 |
 | `snaky list` | 列出所有端点 |
 | `snaky add <name> <domain>` | 添加 cftrace 端点 |
 | `snaky remove <name>` | 删除端点 |

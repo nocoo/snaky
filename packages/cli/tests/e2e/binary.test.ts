@@ -242,7 +242,7 @@ describe("CLI with mock server", () => {
     expect(() => JSON.parse(stdout)).not.toThrow();
   });
 
-  it("--json schema has mode, split, connect, dns fields", { timeout: 15000 }, async () => {
+  it("--json schema has mode, split, connect fields", { timeout: 15000 }, async () => {
     const testConfig = join(dir, "schema-test.json");
     writeFileSync(
       testConfig,
@@ -261,6 +261,7 @@ describe("CLI with mock server", () => {
         timeout: 2000,
         retries: 0,
         pingRounds: 2,
+        dnsLeak: { rounds: 1 },
       }),
     );
 

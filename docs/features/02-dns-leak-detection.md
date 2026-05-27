@@ -19,7 +19,7 @@ Add DNS leak detection to Snaky. Detect which DNS resolver exit IPs are actually
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  snaky dns-leak (CLI)                                           │
+│  snaky dns (CLI)                                                │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. Generate random token (12-char hex)                         │
 │  2. dns.lookup({token}-{1..N}.d.echo.nocoo.cloud) × N rounds   │
@@ -33,9 +33,9 @@ Add DNS leak detection to Snaky. Detect which DNS resolver exit IPs are actually
 ┌─────────────────────────────────────────────────────────────────┐
 │  macOS app — DnsLeakView (Tab: "DNS Leak")                      │
 ├─────────────────────────────────────────────────────────────────┤
-│  Calls: snaky dns-leak --json                                   │
+│  Calls: snaky dns --json                                        │
 │  Shows: resolver IP list with geo/ISP, leak verdict             │
-│  Trigger: manual button press (independent of probe/ping)       │
+│  Trigger: manual button press (independent of split/connect)    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,10 +68,10 @@ Client dns.lookup()  ← uses getaddrinfo (system resolver path)
 
 ## CLI Implementation
 
-### New Subcommand: `snaky dns-leak`
+### Subcommand: `snaky dns`
 
 ```bash
-snaky dns-leak [options]
+snaky dns [options]
 ```
 
 **Options**:
@@ -334,9 +334,9 @@ dns-leak/
 ```
 
 Changes to existing files:
-- `cli/args.ts` — Add `DnsLeakCommand` type, parse `dns-leak` subcommand with `--rounds`, `--extended`
-- `cli/args.test.ts` — Tests for dns-leak arg parsing
-- `cli.ts` — Add `handleDnsLeak()` handler
+- `cli/args.ts` — `DnsCommand` type, parse `dns` subcommand with `--rounds`, `--extended`
+- `cli/args.test.ts` — Tests for dns arg parsing
+- `cli.ts` — `handleDns()` handler
 - `config/types.ts` — Add `DnsLeakConfig` interface
 - `config/schema.ts` — Add `dnsLeak` to known keys + validation
 - `config/loader.ts` — Merge dnsLeak defaults
@@ -390,7 +390,7 @@ public func invokeDnsLeak(extended: Bool = false) async throws -> DnsLeakOutput 
     guard let path = await discovery.discover() else {
         throw CLIError.notFound
     }
-    var args = ["dns-leak", "--json"]
+    var args = ["dns", "--json"]
     if extended { args.insert("--extended", at: 1) }
     let output = try await executor.run(
         executablePath: path,
@@ -455,7 +455,7 @@ Replace placeholder with functional view:
 
 ### ViewModel
 
-Create dedicated `DnsLeakViewModel` (keeps DnsLeak independent from probe/ping):
+Create dedicated `DnsLeakViewModel` (keeps DnsLeak independent from split/connect):
 
 ```swift
 @MainActor
@@ -528,11 +528,11 @@ public final class DnsLeakViewModel: ObservableObject {
 **`cli/args.test.ts` (additions)**:
 | Test case | Assertion |
 |-----------|-----------|
-| `dns-leak` parsed | command type = "dns-leak" |
-| `dns-leak --rounds 8` | rounds = 8 |
-| `dns-leak --rounds 0` | Error: out of range |
-| `dns-leak --rounds 50` | Error: out of range |
-| `dns-leak --extended` | rounds = 8 |
+| `dns` parsed | command type = "dns" |
+| `dns --rounds 8` | rounds = 8 |
+| `dns --rounds 0` | Error: out of range |
+| `dns --rounds 50` | Error: out of range |
+| `dns --extended` | rounds = 8 |
 | `dns-leak --rounds 3 --extended` | rounds = 3 (explicit flag wins) |
 
 **`config/schema.test.ts` (additions)**:

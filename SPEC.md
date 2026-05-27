@@ -46,9 +46,10 @@ snaky/
 ### Commands
 
 ```
-snaky                       # Run all: split-tunnel probe + connectivity test
-snaky probe [name...]       # Probe specific named endpoints only (IP detection)
-snaky ping                  # Connectivity test only (latency to key services)
+snaky                       # Run all: connect + split + dns
+snaky connect               # Connectivity test (latency to key services)
+snaky split [name...]       # Split tunnel probe (IP detection)
+snaky dns                   # DNS leak detection
 snaky list                  # List all endpoints (source: built-in / user / disabled)
 snaky add <name> <domain>   # Add cftrace endpoint (shorthand, most common)
 snaky add <name> --method http-header --url <url> --header <header-name>
@@ -63,7 +64,7 @@ snaky config show           # Print effective config (read-only, never creates f
 snaky config init           # Create config file with default settings (if not exists)
 ```
 
-**`snaky` (no subcommand)** runs both probe and ping in parallel, displays results in two sections.
+**`snaky` (no subcommand)** runs connect, split, and dns in parallel, displays results in three sections.
 
 ### Global Flags
 

@@ -140,4 +140,24 @@ describe("formatDnsLeakTable", () => {
     const text = formatDnsLeakTable(output);
     expect(text).toContain("2 resolvers found");
   });
+
+  it("noColor suppresses ANSI escape sequences", () => {
+    const output: DnsLeakOutput = {
+      token: "a1b2c3d4e5f6",
+      rounds: 5,
+      userIp: "104.28.12.34",
+      userCountry: "United States",
+      userCountryCode: "US",
+      dnsServers: [
+        { ip: "172.64.36.1", country: "US", countryCode: "US", city: null, isp: "Cloudflare", asn: 13335, asOrg: null, leaked: false },
+      ],
+      count: 1,
+      verdict: "no_leak",
+    };
+
+    const text = formatDnsLeakTable(output, { noColor: true });
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally testing for ANSI escapes
+    expect(text).not.toMatch(/\x1b\[/);
+    expect(text).toContain("US");
+  });
 });
