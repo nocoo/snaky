@@ -423,6 +423,16 @@ async function handleRun(
           if (info) u.detail = info;
         }
         ipDetails = [...infoMap.values()];
+
+        // Backfill probe entries whose CF trace returned no location
+        if (probeEntries) {
+          for (const entry of probeEntries) {
+            if (entry.ok && !entry.location) {
+              const info = infoMap.get(entry.ip);
+              if (info?.countryCode) entry.location = info.countryCode;
+            }
+          }
+        }
       }
     }
   }
