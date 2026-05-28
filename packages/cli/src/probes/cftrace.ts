@@ -14,7 +14,7 @@ export async function probeCftrace(
   try {
     response = await fetch(url, {
       method: "GET",
-      redirect: "manual",
+      redirect: "follow",
       signal: AbortSignal.timeout(opts.timeout),
     });
   } catch (err) {
@@ -24,15 +24,6 @@ export async function probeCftrace(
   const responseTimeMs = Math.round(performance.now() - start);
 
   const status = response.status;
-  if (status >= 300 && status < 400) {
-    return {
-      ok: false,
-      code: "REDIRECT",
-      message: `Server responded with ${status} redirect`,
-      responseTimeMs,
-    };
-  }
-
   if (status < 200 || status >= 300) {
     return {
       ok: false,

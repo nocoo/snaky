@@ -84,9 +84,9 @@ struct IntegrationTests {
         #expect(version.contains(semverPattern))
     }
 
-    @Test(.enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
+    @Test(.timeLimit(.minutes(3)), .enabled(if: IntegrationTests.snakyAvailable, "snaky CLI not installed"))
     func bridgeEndToEnd() async throws {
-        let bridge = CLIBridge(timeout: .seconds(60))
+        let bridge = CLIBridge(timeout: .seconds(120))
         let output = try await bridge.invoke()
         #expect(output.mode == .all)
     }

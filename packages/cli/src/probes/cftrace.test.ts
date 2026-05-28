@@ -110,16 +110,13 @@ describe("probeCftrace", () => {
     }
   });
 
-  it("returns REDIRECT for 3xx", async () => {
+  it("follows redirects (fails on unreachable target)", async () => {
     const result = await probeCftrace(
       `http://127.0.0.1:${port}`,
       { timeout: 5000 },
       "/cdn-cgi/trace-redirect",
     );
     expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("REDIRECT");
-    }
   });
 
   it("returns DNS_FAILED for unresolvable host", async () => {
