@@ -42,6 +42,8 @@ export type Flags = {
   tier?: number;
   rounds?: number;
   extended?: boolean;
+  proxy?: string;
+  noProxy?: boolean;
 };
 
 export type ParseSuccess = {
@@ -77,6 +79,8 @@ export function parseCliArgs(argv: string[]): ParseResult {
         header: { type: "string", multiple: true },
         rounds: { type: "string" },
         extended: { type: "boolean", default: false },
+        proxy: { type: "string" },
+        "no-proxy": { type: "boolean", default: false },
       },
       allowPositionals: true,
       strict: false,
@@ -126,6 +130,12 @@ export function parseCliArgs(argv: string[]): ParseResult {
   }
   if (parsed.values.extended) {
     flags.extended = true;
+  }
+  if (parsed.values.proxy) {
+    flags.proxy = parsed.values.proxy as string;
+  }
+  if (parsed.values["no-proxy"]) {
+    flags.noProxy = true;
   }
 
   if (parsed.values.version) {

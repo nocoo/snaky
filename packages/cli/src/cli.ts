@@ -21,6 +21,7 @@ import { probeWithFallback } from "./probes/fallback.js";
 import { probeHttpHeader } from "./probes/http-header.js";
 import { probeHttpPing } from "./probes/http-ping.js";
 import type { ProbeResult } from "./probes/types.js";
+import { detectProxy, installProxyAgent } from "./proxy.js";
 import { runPing } from "./runner/ping-runner.js";
 import { runProbes } from "./runner/probe-runner.js";
 import { buildUniqueSummary } from "./runner/summary.js";
@@ -39,6 +40,14 @@ export async function main(argv: string[]): Promise<number> {
 
   const { command, flags } = parsed;
   const configPath = flags.config ?? DEFAULT_CONFIG_PATH;
+
+  const proxy = detectProxy({ explicit: flags.proxy, disabled: flags.noProxy });
+  if (proxy) {
+    installProxyAgent(proxy.url);
+    if (!flags.json) {
+      process.stderr.write(`Using proxy (${proxy.source}): ${proxy.url}\n`);
+    }
+  }
 
   if (command.type === "version") {
     process.stdout.write(`${__VERSION__}\n`);
@@ -526,6 +535,8 @@ Options:
   --config <path>     Custom config file path
   --category <cat>    Filter by category
   --no-color          Disable colored output
+  --proxy <url>       Override proxy (e.g. http://127.0.0.1:7890)
+  --no-proxy          Disable proxy (ignore env vars and system proxy)
   --version           Print version
   --help              Print this help
 
