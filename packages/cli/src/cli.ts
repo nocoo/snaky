@@ -389,16 +389,6 @@ async function handleRun(
   [probeResults, pingResults] = await Promise.all([probeTask, pingTask]);
   const dnsResult = await dnsTask;
 
-  if (liveCallbacks) {
-    liveCallbacks.setComplete();
-  }
-
-  // Small delay for final render frame
-  if (liveUnmount) {
-    await new Promise((r) => setTimeout(r, 100));
-    liveUnmount();
-  }
-
   if (probeResults) {
     probeEntries = endpoints.map((ep, i) => {
       const r = probeResults[i];
@@ -407,34 +397,47 @@ async function handleRun(
     });
   }
 
-  // Enrich IPs with geo/ISP data from Echo API
+  // Enrich IPs with geo/ISP data from Echo API (before unmounting the live TUI,
+  // so backfilled locations can be re-injected into the rendered probe table)
   const uniqueIps = probeResults ? buildUniqueSummary(probeResults) : [];
   let ipDetails: IpDetail[] | undefined;
 
-  if (probeResults && uniqueIps.length > 0) {
-    if (secrets.echoApiKey) {
-      const enrichSpinner = useLiveTui ? startSpinner("Enriching IP details...") : null;
-      const ips = uniqueIps.map((u) => u.ip);
-      const infoMap = await lookupIps(ips, secrets.echoApiKey);
-      enrichSpinner?.stop();
-      if (infoMap.size > 0) {
-        for (const u of uniqueIps) {
-          const info = infoMap.get(u.ip);
-          if (info) u.detail = info;
-        }
-        ipDetails = [...infoMap.values()];
+  if (probeResults && uniqueIps.length > 0 && secrets.echoApiKey) {
+    liveCallbacks?.setDnsProgress("Enriching IP details...");
+    const ips = uniqueIps.map((u) => u.ip);
+    const infoMap = await lookupIps(ips, secrets.echoApiKey);
+    if (infoMap.size > 0) {
+      for (const u of uniqueIps) {
+        const info = infoMap.get(u.ip);
+        if (info) u.detail = info;
+      }
+      ipDetails = [...infoMap.values()];
 
-        // Backfill probe entries whose CF trace returned no location
-        if (probeEntries) {
-          for (const entry of probeEntries) {
-            if (entry.ok && !entry.location) {
-              const info = infoMap.get(entry.ip);
-              if (info?.countryCode) entry.location = info.countryCode;
+      // Backfill probe entries whose CF trace returned no location, and
+      // re-inject into the live TUI so the rendered table reflects it
+      if (probeEntries) {
+        for (let i = 0; i < probeEntries.length; i++) {
+          const entry = probeEntries[i];
+          if (entry?.ok && !entry.location) {
+            const info = infoMap.get(entry.ip);
+            if (info?.countryCode) {
+              entry.location = info.countryCode;
+              liveCallbacks?.setProbeResult(i, entry);
             }
           }
         }
       }
     }
+  }
+
+  if (liveCallbacks) {
+    liveCallbacks.setComplete();
+  }
+
+  // Small delay for final render frame
+  if (liveUnmount) {
+    await new Promise((r) => setTimeout(r, 100));
+    liveUnmount();
   }
 
   // Output
