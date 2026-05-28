@@ -1,6 +1,6 @@
 import type { PingResult } from "../runner/ping-runner.js";
 import type { UniqueIp } from "../runner/summary.js";
-import { colorCountry, colorCountryPad } from "../utils/color-country.js";
+import { colorCountry, colorCountryPad, padDisplay } from "../utils/color-country.js";
 import type { ProbeEntry } from "./types.js";
 
 type TableOpts = {
@@ -82,11 +82,11 @@ export function formatIpSummaryTable(
     const rawLoc = d
       ? [d.countryCode, d.province || d.city].filter(Boolean).join("/") || "—"
       : u.location ?? "—";
-    const loc = colorCountryPad(rawLoc, 14, opts.noColor);
+    const loc = colorCountryPad(rawLoc, 18, opts.noColor);
     const isp = d?.isp ?? "—";
     const asn = d?.asn ? `AS${d.asn}` : "";
     lines.push(
-      `  ${u.ip.padEnd(42)} ${loc} ${isp}${asn ? `  ${asn}` : ""}`,
+      `  ${u.ip.padEnd(42)} ${loc} ${asn ? `${padDisplay(isp, 18)} ${asn}` : isp}`,
     );
   }
   return lines.join("\n");

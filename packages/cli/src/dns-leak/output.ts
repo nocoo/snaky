@@ -5,7 +5,8 @@ export function formatDnsLeakTable(output: DnsLeakOutput, opts?: { noColor?: boo
   const noColor = opts?.noColor;
   const lines: string[] = [];
 
-  lines.push(`🛡️ DNS Leak Test (${output.rounds} rounds)`);
+  lines.push("");
+  lines.push("🛡️ DNS Leak Test");
   lines.push("─".repeat(49));
 
   if (output.verdict === "inconclusive" && output.count === 0) {
