@@ -21,7 +21,7 @@ import { probeWithFallback } from "./probes/fallback.js";
 import { probeHttpHeader } from "./probes/http-header.js";
 import { probeHttpPing } from "./probes/http-ping.js";
 import type { ProbeResult } from "./probes/types.js";
-import { detectProxy, installProxyAgent } from "./proxy.js";
+import { detectProxy, installProxyAgent, loadSystemCAs } from "./proxy.js";
 import { runPing } from "./runner/ping-runner.js";
 import { runProbes } from "./runner/probe-runner.js";
 import { buildUniqueSummary } from "./runner/summary.js";
@@ -40,6 +40,8 @@ export async function main(argv: string[]): Promise<number> {
 
   const { command, flags } = parsed;
   const configPath = flags.config ?? DEFAULT_CONFIG_PATH;
+
+  loadSystemCAs();
 
   const proxy = detectProxy({ explicit: flags.proxy, disabled: flags.noProxy });
   if (proxy) {

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { platform } from "node:os";
+import tls from "node:tls";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 export type ProxySource = "flag" | "env" | "system";
@@ -32,6 +33,37 @@ export function detectProxy(opts: { explicit?: string; disabled?: boolean }): De
 
 export function installProxyAgent(url: string): void {
   setGlobalDispatcher(new ProxyAgent(url));
+}
+
+export function loadSystemCAs(): boolean {
+  if (platform() !== "darwin") return false;
+  if (
+    typeof tls.getCACertificates !== "function" ||
+    typeof tls.setDefaultCACertificates !== "function"
+  ) {
+    return false;
+  }
+
+  try {
+    const pem = execFileSync(
+      "/usr/bin/security",
+      [
+        "find-certificate",
+        "-a",
+        "-p",
+        "/System/Library/Keychains/SystemRootCertificates.keychain",
+      ],
+      { encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 3000 },
+    );
+    const roots = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g);
+    if (!roots || roots.length === 0) return false;
+
+    const merged = [...new Set([...tls.getCACertificates("default"), ...roots])];
+    tls.setDefaultCACertificates(merged);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function normalizeProxyUrl(raw: string): string {
