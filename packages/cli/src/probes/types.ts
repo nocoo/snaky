@@ -12,6 +12,7 @@ export type ProbeError = {
     | "TIMEOUT"
     | "DNS_FAILED"
     | "CONNECTION_REFUSED"
+    | "CONNECTION_FAILED"
     | "TLS_ERROR"
     | "HTTP_ERROR"
     | "PARSE_ERROR"

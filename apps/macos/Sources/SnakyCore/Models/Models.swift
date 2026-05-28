@@ -74,6 +74,7 @@ public enum ErrorCode: String, Codable, Sendable {
     case timeout = "TIMEOUT"
     case dnsFailed = "DNS_FAILED"
     case connectionRefused = "CONNECTION_REFUSED"
+    case connectionFailed = "CONNECTION_FAILED"
     case tlsError = "TLS_ERROR"
     case httpError = "HTTP_ERROR"
     case parseError = "PARSE_ERROR"
