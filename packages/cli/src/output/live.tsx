@@ -157,7 +157,7 @@ function App({ probeNames, pingNames, showDns, onReady }: AppProps): React.React
       )}
       {dnsProgress !== null && (
         <Box marginTop={1}>
-          <Spinner /><Text bold> 🛡️ DNS Leak: </Text><Text>{dnsProgress}</Text>
+          <Spinner /><Text bold> 🛡️  DNS Leak: </Text><Text>{dnsProgress}</Text>
         </Box>
       )}
     </Box>

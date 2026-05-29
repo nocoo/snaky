@@ -34,6 +34,7 @@ export type Command = RunCommand | AddCommand | NameCommand | DnsCommand | Simpl
 
 export type Flags = {
   json: boolean;
+  ndjson: boolean;
   noColor: boolean;
   timeout?: number;
   concurrency?: number;
@@ -66,6 +67,7 @@ export function parseCliArgs(argv: string[]): ParseResult {
       args: argv,
       options: {
         json: { type: "boolean", default: false },
+        ndjson: { type: "boolean", default: false },
         "no-color": { type: "boolean", default: false },
         timeout: { type: "string" },
         concurrency: { type: "string" },
@@ -91,6 +93,7 @@ export function parseCliArgs(argv: string[]): ParseResult {
 
   const flags: Flags = {
     json: parsed.values.json as boolean,
+    ndjson: parsed.values.ndjson as boolean,
     noColor: parsed.values["no-color"] as boolean,
   };
 

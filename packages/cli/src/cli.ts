@@ -14,6 +14,7 @@ import { formatDnsLeakTable } from "./dns-leak/output.js";
 import { normalizeDomain } from "./normalize.js";
 import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
+import { createNdjsonWriter, type NdjsonWriter } from "./output/ndjson.js";
 import { startSpinner } from "./output/spinner.js";
 import { formatIpSummaryTable, formatPingTable, formatProbeTable } from "./output/table.js";
 import type { FullOutput, IpDetail, ProbeEntry } from "./output/types.js";
@@ -207,6 +208,7 @@ async function handleRun(
   command: RunCommand,
   flags: {
     json?: boolean;
+    ndjson?: boolean;
     noColor?: boolean;
     timeout?: number;
     concurrency?: number;
@@ -268,9 +270,14 @@ async function handleRun(
   }
 
   // Build async tasks
-  const useLiveTui = !flags.json && !flags.noColor && process.stdout.isTTY;
+  const useNdjson = !!flags.ndjson;
+  const useLiveTui = !flags.json && !useNdjson && !flags.noColor && process.stdout.isTTY;
   let liveCallbacks: LiveCallbacks | null = null;
   let liveUnmount: (() => void) | null = null;
+  let ndjson: NdjsonWriter | null = null;
+  if (useNdjson) {
+    ndjson = createNdjsonWriter(process.stdout);
+  }
 
   const pingTargets = shouldPing
     ? config.pingTargets.filter((t) => t.tier <= tier)
@@ -285,6 +292,21 @@ async function handleRun(
     );
     liveCallbacks = await live.callbacks;
     liveUnmount = live.unmount;
+  }
+
+  if (ndjson) {
+    ndjson.emit({
+      event: "meta",
+      data: {
+        mode: command.mode,
+        version: __VERSION__,
+        counts: {
+          ...(shouldProbe ? { split: endpoints.length } : {}),
+          ...(shouldPing ? { connect: pingTargets.length } : {}),
+          ...(shouldDns ? { dns: true } : {}),
+        },
+      },
+    });
   }
 
   const buildProbeEntry = (ep: Endpoint, r: ProbeResult): ProbeEntry => {
@@ -342,11 +364,14 @@ async function handleRun(
           concurrency,
           probeFn,
           onResult(index, result) {
-            if (liveCallbacks) {
-              const ep = endpoints[index];
-              if (ep) {
-                const entry = buildProbeEntry(ep, result);
+            const ep = endpoints[index];
+            if (ep) {
+              const entry = buildProbeEntry(ep, result);
+              if (liveCallbacks) {
                 liveCallbacks.setProbeResult(index, entry);
+              }
+              if (ndjson) {
+                ndjson.emit({ event: "probe.result", data: { ...entry, index } });
               }
             }
           },
@@ -360,9 +385,10 @@ async function handleRun(
         pingTimeout: config.settings.pingTimeout,
         concurrency,
         pingFn: (url, opts) => probeHttpPing(url, opts),
-        onResult: liveCallbacks
-          ? (index, result) => { liveCallbacks?.setPingResult(index, result); }
-          : undefined,
+        onResult: (index, result) => {
+          liveCallbacks?.setPingResult(index, result);
+          ndjson?.emit({ event: "ping.result", data: { ...result, index } });
+        },
       })
     : null;
 
@@ -377,10 +403,12 @@ async function handleRun(
           rounds,
           expectedResolvers: config.dnsLeak.expectedResolvers,
           echoApiKey: secrets.echoApiKey,
-          onProgress: liveCallbacks
-            ? (msg) => liveCallbacks?.setDnsProgress(msg)
-            : undefined,
+          onProgress: (msg) => {
+            liveCallbacks?.setDnsProgress(msg);
+            ndjson?.emit({ event: "dns.progress", data: { message: msg } });
+          },
         });
+        ndjson?.emit({ event: "dns.update", data: output });
         return { output, exitCode };
       })()
     : null;
@@ -413,6 +441,15 @@ async function handleRun(
       }
       ipDetails = [...infoMap.values()];
 
+      if (ndjson) {
+        for (const detail of ipDetails) {
+          ndjson.emit({ event: "ip.detail", data: detail });
+        }
+        for (const u of uniqueIps) {
+          ndjson.emit({ event: "unique.ip", data: u });
+        }
+      }
+
       // Backfill probe entries whose CF trace returned no location, and
       // re-inject into the live TUI so the rendered table reflects it
       if (probeEntries) {
@@ -423,10 +460,15 @@ async function handleRun(
             if (info?.countryCode) {
               entry.location = info.countryCode;
               liveCallbacks?.setProbeResult(i, entry);
+              ndjson?.emit({ event: "probe.result", data: { ...entry, index: i } });
             }
           }
         }
       }
+    }
+  } else if (ndjson && uniqueIps.length > 0) {
+    for (const u of uniqueIps) {
+      ndjson.emit({ event: "unique.ip", data: u });
     }
   }
 
@@ -442,25 +484,33 @@ async function handleRun(
 
   // Output
   const mode = command.mode;
+  const fullOutput: FullOutput = {
+    mode,
+    split: probeEntries
+      ? {
+          results: probeEntries,
+          summary: {
+            total: probeEntries.length,
+            succeeded: probeEntries.filter((e) => e.ok).length,
+            failed: probeEntries.filter((e) => !e.ok).length,
+          },
+          uniqueIps,
+        }
+      : null,
+    connect: pingResults ? { results: pingResults } : null,
+    dns: dnsResult?.output ?? null,
+    ...(ipDetails ? { ipDetails } : {}),
+  };
+
+  if (useNdjson) {
+    ndjson?.emit({ event: "summary", data: fullOutput });
+    const code = computeExitCode(mode, probeResults, pingResults);
+    ndjson?.emit({ event: "done", data: { exitCode: code } });
+    return code;
+  }
+
   if (flags.json) {
-    const output: FullOutput = {
-      mode,
-      split: probeEntries
-        ? {
-            results: probeEntries,
-            summary: {
-              total: probeEntries.length,
-              succeeded: probeEntries.filter((e) => e.ok).length,
-              failed: probeEntries.filter((e) => !e.ok).length,
-            },
-            uniqueIps,
-          }
-        : null,
-      connect: pingResults ? { results: pingResults } : null,
-      dns: dnsResult?.output ?? null,
-      ...(ipDetails ? { ipDetails } : {}),
-    };
-    process.stdout.write(`${formatJson(output)}\n`);
+    process.stdout.write(`${formatJson(fullOutput)}\n`);
   } else if (useLiveTui) {
     const ipTable = formatIpSummaryTable(uniqueIps);
     if (ipTable) process.stdout.write(`\n${ipTable}\n`);
@@ -488,7 +538,7 @@ async function handleRun(
 
 async function handleDns(
   command: DnsCommand,
-  flags: { json?: boolean; noColor?: boolean; config?: string },
+  flags: { json?: boolean; ndjson?: boolean; noColor?: boolean; config?: string },
   configPath: string,
 ): Promise<number> {
   const loaded = loadConfig(existsSync(configPath) ? configPath : undefined);
@@ -504,19 +554,34 @@ async function handleDns(
     ?? (command.extended ? 8 : undefined)
     ?? config.dnsLeak.rounds;
 
-  const useTtySpinner = !flags.json && process.stdout.isTTY;
+  const useNdjson = !!flags.ndjson;
+  const ndjson = useNdjson ? createNdjsonWriter(process.stdout) : null;
+  const useTtySpinner = !flags.json && !useNdjson && process.stdout.isTTY;
   const spinner = useTtySpinner ? startSpinner("Detecting DNS resolvers...") : null;
+
+  if (ndjson) {
+    ndjson.emit({
+      event: "meta",
+      data: { mode: "dns", version: __VERSION__, counts: { dns: true } },
+    });
+  }
 
   const { output, exitCode } = await runDnsLeakDetection({
     rounds,
     expectedResolvers: config.dnsLeak.expectedResolvers,
     echoApiKey: secrets.echoApiKey,
-    onProgress: spinner ? (msg) => spinner.update(msg) : undefined,
+    onProgress: (msg) => {
+      spinner?.update(msg);
+      ndjson?.emit({ event: "dns.progress", data: { message: msg } });
+    },
   });
 
   spinner?.stop();
 
-  if (flags.json) {
+  if (ndjson) {
+    ndjson.emit({ event: "dns.update", data: output });
+    ndjson.emit({ event: "done", data: { exitCode } });
+  } else if (flags.json) {
     process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
     process.stdout.write(`${formatDnsLeakTable(output, { noColor: flags.noColor })}\n`);
@@ -543,7 +608,8 @@ Commands:
   config init         Create config file
 
 Options:
-  --json              Output JSON to stdout
+  --json              Output JSON to stdout (final result only)
+  --ndjson            Stream NDJSON events to stdout (one event per line)
   --timeout <ms>      Per-endpoint timeout (default: 5000)
   --concurrency <n>   Max parallel requests (default: 10)
   --tier <n>          Max endpoint tier to include (default: 1)
