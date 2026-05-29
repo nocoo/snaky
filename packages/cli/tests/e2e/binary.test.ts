@@ -15,16 +15,11 @@ function run(args: string[], env?: Record<string, string>, timeout = 15000) {
     timeout,
   }).then(
     ({ stdout, stderr }) => ({ stdout, stderr, exitCode: 0 }),
-    (err: { stdout: string; stderr: string; code: number; message?: string; signal?: string; path?: string }) => {
-      if (process.env.CI) {
-        console.error(`[run ${args.join(" ")}] code=${err.code} (${typeof err.code}) signal=${err.signal} path=${err.path} msg=${err.message?.slice(0, 200)}\n--stderr--\n${err.stderr}\n--stdout--\n${err.stdout}\n--end--`);
-      }
-      return {
-        stdout: err.stdout ?? "",
-        stderr: err.stderr ?? "",
-        exitCode: err.code,
-      };
-    },
+    (err: { stdout: string; stderr: string; code: number }) => ({
+      stdout: err.stdout ?? "",
+      stderr: err.stderr ?? "",
+      exitCode: err.code,
+    }),
   );
 }
 
