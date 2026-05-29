@@ -125,8 +125,21 @@ private final class FakeProcessExecutor: ProcessExecutor, @unchecked Sendable {
     }
 
     func run(executablePath: String, arguments: [String], timeout: Duration) async throws -> ProcessOutput {
+        let isNdjson = arguments.contains("--ndjson")
         switch result {
         case .success(let output):
+            if isNdjson {
+                var buffer = Data()
+                let metaLine = #"{"event":"meta","data":{"mode":"all","version":"test","counts":{}}}"# + "\n"
+                buffer.append(Data(metaLine.utf8))
+                let wrapper = ErrorStateSummaryWrapper(event: "summary", data: output)
+                if let summary = try? JSONEncoder().encode(wrapper) {
+                    buffer.append(summary)
+                    buffer.append(Data("\n".utf8))
+                }
+                buffer.append(Data((#"{"event":"done","data":{"exitCode":0}}"# + "\n").utf8))
+                return ProcessOutput(exitCode: 0, stdout: buffer, stderr: Data())
+            }
             let data = try JSONEncoder().encode(output)
             return ProcessOutput(exitCode: 0, stdout: data, stderr: Data())
         case .failure(let error):
@@ -144,4 +157,9 @@ private final class FakeProcessExecutor: ProcessExecutor, @unchecked Sendable {
             }
         }
     }
+}
+
+private struct ErrorStateSummaryWrapper: Encodable {
+    let event: String
+    let data: FullOutput
 }

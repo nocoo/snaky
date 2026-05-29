@@ -108,9 +108,14 @@ public struct PopoverContentView: View {
 
     @ViewBuilder
     private var loadingView: some View {
-        if let previous = viewModel.previousResult {
-            successView(previous)
-                .opacity(0.5)
+        if viewModel.previousResult != nil
+            || !viewModel.streamingEntries.isEmpty
+            || !viewModel.streamingPing.isEmpty {
+            // We are streaming — show whatever we have so far.
+            // previousResult is rebuilt by publishLive() each event, so this is fresh data.
+            if let live = viewModel.previousResult {
+                successView(live)
+            }
         } else {
             SkeletonView()
         }
@@ -149,13 +154,15 @@ public struct PopoverContentView: View {
             ProbeSection(
                 entries: probe.results,
                 enabledTargets: viewModel.enabledProbeTargets,
-                onToggle: viewModel.toggleProbeTarget
+                onToggle: viewModel.toggleProbeTarget,
+                isStreaming: viewModel.probesInFlight
             )
         } else {
             ProbeSection(
                 entries: [],
                 enabledTargets: viewModel.enabledProbeTargets,
-                onToggle: viewModel.toggleProbeTarget
+                onToggle: viewModel.toggleProbeTarget,
+                isStreaming: viewModel.probesInFlight
             )
         }
         if output.connect?.results.isEmpty ?? true && output.split == nil {

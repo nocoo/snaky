@@ -13,6 +13,14 @@ public final class AppViewModel: ObservableObject {
     @Published public private(set) var pingHistory: [String: [PingRoundDot]] = [:]
     @Published public var enabledProbeTargets: Set<String>
 
+    // Streaming state — populated incrementally as NDJSON events arrive
+    @Published public private(set) var streamingEntries: [String: ProbeEntry] = [:]
+    @Published public private(set) var streamingPing: [String: PingResult] = [:]
+    @Published public private(set) var streamingPingOrder: [String] = []
+    @Published public private(set) var streamingUniqueIps: [UniqueIp] = []
+    @Published public private(set) var probesInFlight: Bool = false
+    @Published public private(set) var pingInFlight: Bool = false
+
     private static let enabledProbeTargetsKey = "enabledProbeTargets"
     private let maxHistoryDots = 30
 
@@ -21,11 +29,6 @@ public final class AppViewModel: ObservableObject {
         case loading
         case success(FullOutput)
         case error(CLIError)
-    }
-
-    private enum PartialResult: Sendable {
-        case ping(Result<FullOutput, CLIError>)
-        case probe(Result<FullOutput, CLIError>)
     }
 
     private var currentTask: Task<Void, Never>?
@@ -52,80 +55,138 @@ public final class AppViewModel: ObservableObject {
         currentTask?.cancel()
         state = .loading
         statusMessage = nil
+        streamingEntries.removeAll()
+        streamingPing.removeAll()
+        streamingPingOrder.removeAll()
+        streamingUniqueIps.removeAll()
+        probesInFlight = true
+        pingInFlight = true
         currentTask = Task {
             if cliVersion == nil {
                 cliVersion = await bridge.fetchVersion()
             }
-            await fetchParallel()
+            await fetchStreaming()
         }
     }
 
-    private func fetchParallel() async {
-        await withTaskGroup(of: PartialResult.self) { group in
-            group.addTask { await self.fetchPing() }
-            group.addTask { await self.fetchProbe() }
+    private func fetchStreaming() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.streamProbes() }
+            group.addTask { await self.streamPing() }
+        }
+        guard !Task.isCancelled else { return }
+        // Compose final FullOutput from streaming state if not already set by summary
+        commitFinalIfNeeded()
+    }
 
-            var ping: PingOutput?
-            var probe: ProbeOutput?
-            var ipDetails: [IpDetail]?
-            var pingError: CLIError?
-            var probeError: CLIError?
-
-            for await partial in group {
-                guard !Task.isCancelled else { return }
-                switch partial {
-                case .ping(.success(let output)):
-                    ping = output.connect
-                case .ping(.failure(let error)):
-                    pingError = error
-                case .probe(.success(let output)):
-                    probe = output.split
-                    ipDetails = output.ipDetails
-                case .probe(.failure(let error)):
-                    probeError = error
-                }
-
-                if ping != nil || probe != nil {
-                    let merged = FullOutput(mode: .all, split: probe, connect: ping, dns: nil, ipDetails: ipDetails)
-                    previousResult = merged
-                    lastUpdated = Date()
-                    state = .success(merged)
+    private nonisolated func streamProbes() async {
+        do {
+            let stream = try await bridge.streamRun(mode: "split", tier: 2)
+            for try await event in stream {
+                if Task.isCancelled { return }
+                await handle(event: event, kind: .probe)
+            }
+            await MainActor.run { self.probesInFlight = false }
+        } catch let error as CLIError {
+            await MainActor.run {
+                self.probesInFlight = false
+                if case .success = self.state { return }
+                if self.streamingEntries.isEmpty && self.streamingPing.isEmpty {
+                    self.state = .error(error)
                 }
             }
-
-            guard !Task.isCancelled else { return }
-            finalizeFetch(ping: ping, probe: probe, pingError: pingError, probeError: probeError)
-        }
-    }
-
-    private func finalizeFetch(ping: PingOutput?, probe: ProbeOutput?, pingError: CLIError?, probeError: CLIError?) {
-        if let results = ping?.results {
-            appendPingHistory(results)
-        }
-        if ping == nil && probe == nil {
-            let error = pingError ?? probeError ?? .timeout
-            if error == .timeout { statusMessage = "Timed out" }
-            state = .error(error)
-        }
-    }
-
-    private nonisolated func fetchPing() async -> PartialResult {
-        do {
-            return .ping(.success(try await bridge.invoke(mode: "connect")))
-        } catch let error as CLIError {
-            return .ping(.failure(error))
         } catch {
-            return .ping(.failure(.timeout))
+            await MainActor.run {
+                self.probesInFlight = false
+                if self.streamingEntries.isEmpty && self.streamingPing.isEmpty {
+                    self.state = .error(.fatal(error.localizedDescription))
+                }
+            }
         }
     }
 
-    private nonisolated func fetchProbe() async -> PartialResult {
+    private nonisolated func streamPing() async {
         do {
-            return .probe(.success(try await bridge.invoke(mode: "split", tier: 2)))
+            let stream = try await bridge.streamRun(mode: "connect")
+            for try await event in stream {
+                if Task.isCancelled { return }
+                await handle(event: event, kind: .ping)
+            }
+            await MainActor.run { self.pingInFlight = false }
         } catch let error as CLIError {
-            return .probe(.failure(error))
+            await MainActor.run {
+                self.pingInFlight = false
+                if case .success = self.state { return }
+                if self.streamingEntries.isEmpty && self.streamingPing.isEmpty {
+                    self.state = .error(error)
+                }
+            }
         } catch {
-            return .probe(.failure(.timeout))
+            await MainActor.run {
+                self.pingInFlight = false
+                if self.streamingEntries.isEmpty && self.streamingPing.isEmpty {
+                    self.state = .error(.fatal(error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    private enum StreamKind { case probe, ping }
+
+    @MainActor
+    private func handle(event: NdjsonEvent, kind: StreamKind) {
+        switch event {
+        case .probeResult(_, let entry):
+            streamingEntries[entry.name] = entry
+            publishLive()
+        case .pingResult(_, let result):
+            if streamingPing[result.name] == nil {
+                streamingPingOrder.append(result.name)
+            }
+            streamingPing[result.name] = result
+            appendPingHistory([result])
+            publishLive()
+        case .uniqueIp(let unique):
+            if !streamingUniqueIps.contains(where: { $0.ip == unique.ip }) {
+                streamingUniqueIps.append(unique)
+            }
+            publishLive()
+        case .ipDetail:
+            // Detail attached to uniqueIp.detail by CLI before unique.ip event
+            break
+        case .summary(let full):
+            // Authoritative final state
+            previousResult = full
+            lastUpdated = Date()
+            state = .success(full)
+        case .meta, .dnsProgress, .dnsUpdate, .errorEvent, .done, .unknown:
+            break
+        }
+        _ = kind  // reserved if we want to differentiate later
+    }
+
+    private func publishLive() {
+        let probeEntries = Array(streamingEntries.values)
+        let pingResults = streamingPingOrder.compactMap { streamingPing[$0] }
+        let probe = probeEntries.isEmpty ? nil : ProbeOutput(
+            results: probeEntries,
+            summary: ProbeSummary(
+                total: probeEntries.count,
+                succeeded: probeEntries.filter { $0.ok }.count,
+                failed: probeEntries.filter { !$0.ok }.count
+            ),
+            uniqueIps: streamingUniqueIps
+        )
+        let ping = pingResults.isEmpty ? nil : PingOutput(results: pingResults)
+        let merged = FullOutput(mode: .all, split: probe, connect: ping, dns: nil, ipDetails: nil)
+        previousResult = merged
+        lastUpdated = Date()
+        state = .success(merged)
+    }
+
+    private func commitFinalIfNeeded() {
+        if case .loading = state {
+            publishLive()
         }
     }
 
@@ -144,6 +205,8 @@ public final class AppViewModel: ObservableObject {
     public func cancel() {
         currentTask?.cancel()
         currentTask = nil
+        probesInFlight = false
+        pingInFlight = false
         statusMessage = "Refresh cancelled"
         if let previous = previousResult {
             state = .success(previous)

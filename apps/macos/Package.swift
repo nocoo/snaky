@@ -21,6 +21,11 @@ let package = Package(
             path: "Sources/Snaky",
             exclude: ["Resources"]
         ),
+        .executableTarget(
+            name: "StreamSmokeTest",
+            dependencies: ["SnakyCore"],
+            path: "Sources/StreamSmokeTest"
+        ),
         .testTarget(
             name: "SnakyCoreTests",
             dependencies: ["SnakyCore"],

@@ -157,8 +157,22 @@ private final class TestProcessExecutor: ProcessExecutor, @unchecked Sendable {
         if mock.delay > .zero {
             try await Task.sleep(for: mock.delay)
         }
+        let isNdjson = arguments.contains("--ndjson")
         switch mock.result {
         case .success(let output):
+            if isNdjson {
+                let encoder = JSONEncoder()
+                var buffer = Data()
+                let metaLine = #"{"event":"meta","data":{"mode":"all","version":"test","counts":{}}}"# + "\n"
+                buffer.append(Data(metaLine.utf8))
+                let summaryWrapper = SummaryWrapper(event: "summary", data: output)
+                if let summaryData = try? encoder.encode(summaryWrapper) {
+                    buffer.append(summaryData)
+                    buffer.append(Data("\n".utf8))
+                }
+                buffer.append(Data((#"{"event":"done","data":{"exitCode":0}}"# + "\n").utf8))
+                return ProcessOutput(exitCode: 0, stdout: buffer, stderr: Data())
+            }
             let data = try JSONEncoder().encode(output)
             return ProcessOutput(exitCode: 0, stdout: data, stderr: Data())
         case .failure(let error):
@@ -176,4 +190,9 @@ private final class TestProcessExecutor: ProcessExecutor, @unchecked Sendable {
             }
         }
     }
+}
+
+private struct SummaryWrapper: Encodable {
+    let event: String
+    let data: FullOutput
 }

@@ -4,6 +4,7 @@ struct ProbeSection: View {
     let entries: [ProbeEntry]
     let enabledTargets: Set<String>
     let onToggle: (String) -> Void
+    var isStreaming: Bool = false
 
     private var resultsByName: [String: ProbeEntry] {
         Dictionary(entries.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
@@ -19,6 +20,7 @@ struct ProbeSection: View {
                         targets: group.targets,
                         resultsByName: resultsByName,
                         enabledTargets: enabledTargets,
+                        isStreaming: isStreaming,
                         onToggle: onToggle
                     )
                 }
@@ -33,6 +35,7 @@ private struct ProbeGroupView: View {
     let targets: [ProbeTarget]
     let resultsByName: [String: ProbeEntry]
     let enabledTargets: Set<String>
+    let isStreaming: Bool
     let onToggle: (String) -> Void
 
     var body: some View {
@@ -51,6 +54,7 @@ private struct ProbeGroupView: View {
                         target: target,
                         entry: entry,
                         isEnabled: enabled,
+                        isStreaming: isStreaming,
                         onToggle: { onToggle(target.name) }
                     )
                 }
@@ -63,6 +67,7 @@ private struct ProbeTargetRow: View {
     let target: ProbeTarget
     let entry: ProbeEntry?
     let isEnabled: Bool
+    let isStreaming: Bool
     let onToggle: () -> Void
 
     var body: some View {
@@ -86,10 +91,16 @@ private struct ProbeTargetRow: View {
                     Badge(text: "T2", color: Theme.tertiaryText, background: Theme.tertiaryText.opacity(0.15))
                 }
                 Spacer()
+                if isEnabled && isStreaming && entry == nil {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(Theme.tertiaryText)
+                }
             }
         }
         .padding(.vertical, 4)
         .opacity(isEnabled ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.2), value: entry?.ok)
     }
 
     @ViewBuilder

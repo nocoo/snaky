@@ -55,6 +55,11 @@ final class StatusItemController {
         }
     }
 
+    func autoShow() {
+        guard let button = statusItem.button else { return }
+        showPanel(button)
+    }
+
     private func showPanel(_ sender: NSStatusBarButton) {
         guard let buttonWindow = sender.window else { return }
         let buttonFrame = buttonWindow.frame
