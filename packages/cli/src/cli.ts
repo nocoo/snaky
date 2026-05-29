@@ -120,20 +120,20 @@ function handleList(configPath: string, _flags: { noColor?: boolean }): number {
 
   const { endpoints, pingTargets } = loaded.config;
   const lines: string[] = [];
-  lines.push("Name                Method        Category    Source");
-  lines.push("─".repeat(60));
+  lines.push("Name                Method        Category         Source");
+  lines.push("─".repeat(64));
 
   for (const ep of endpoints) {
     const source = BUILTIN_ENDPOINTS.some((b) => b.name === ep.name) ? "built-in" : "user";
     lines.push(
-      `${ep.name.padEnd(20)}${ep.method.padEnd(14)}${ep.category.padEnd(12)}${source}`,
+      `${ep.name.padEnd(20)}${ep.method.padEnd(14)}${ep.category.padEnd(17)}${source}`,
     );
   }
 
   for (const pt of pingTargets) {
     const source = BUILTIN_PING_TARGETS.some((b) => b.name === pt.name) ? "built-in" : "user";
     lines.push(
-      `${pt.name.padEnd(20)}${"http-ping".padEnd(14)}${pt.tag.padEnd(12)}${source}`,
+      `${pt.name.padEnd(20)}${"http-ping".padEnd(14)}${pt.tag.padEnd(17)}${source}`,
     );
   }
 
