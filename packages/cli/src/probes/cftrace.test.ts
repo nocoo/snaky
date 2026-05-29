@@ -30,7 +30,7 @@ beforeAll(async () => {
     }
 
     if (url.pathname === "/cdn-cgi/trace-redirect") {
-      res.writeHead(301, { location: "https://other.com/cdn-cgi/trace" });
+      res.writeHead(301, { location: "http://127.0.0.1:1/cdn-cgi/trace" });
       res.end();
       return;
     }

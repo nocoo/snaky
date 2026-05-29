@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.2 (2026-05-29)
+
+### Fixes
+
+- **TLS** — load macOS system root CAs so Cloudflare-China endpoints (e.g. qualcomm-cn) whose chain terminates at AAA Certificate Services verify instead of failing with `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` (darwin + Node 22+, fail-safe)
+- **Split output** — backfill probe Location from Echo geo when the CF trace omits `loc=`, re-injected into the live TUI before unmount so the rendered table reflects it
+- **IP Summary** — align columns by display width (CJK glyphs render double-wide)
+
+### Changes
+
+- **DNS Leak heading** — drop the "(N rounds)" suffix and add a leading blank line
+
 ## v0.5.0 (2026-05-25)
 
 First feature-complete release of the CLI tool.
