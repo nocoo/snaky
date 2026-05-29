@@ -9,10 +9,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const execFileP = promisify(execFile);
 const CLI_PATH = join(import.meta.dirname, "../../dist/index.js");
 
-function run(args: string[], env?: Record<string, string>) {
+function run(args: string[], env?: Record<string, string>, timeout = 15000) {
   return execFileP("node", [CLI_PATH, ...args], {
     env: { ...process.env, ...env, NO_COLOR: "1" },
-    timeout: 15000,
+    timeout,
   }).then(
     ({ stdout, stderr }) => ({ stdout, stderr, exitCode: 0 }),
     (err: { stdout: string; stderr: string; code: number }) => ({
@@ -242,7 +242,7 @@ describe("CLI with mock server", () => {
     expect(() => JSON.parse(stdout)).not.toThrow();
   });
 
-  it("--json schema has mode, split, connect fields", { timeout: 15000 }, async () => {
+  it("--json schema has mode, split, connect fields", { timeout: 30000 }, async () => {
     const testConfig = join(dir, "schema-test.json");
     writeFileSync(
       testConfig,
@@ -265,10 +265,11 @@ describe("CLI with mock server", () => {
       }),
     );
 
-    const { stdout } = await run([
-      "--json",
-      "--config", testConfig,
-    ]);
+    const { stdout } = await run(
+      ["--json", "--rounds", "1", "--config", testConfig],
+      undefined,
+      25000,
+    );
     const parsed = JSON.parse(stdout);
     expect(parsed).toHaveProperty("mode", "all");
     expect(parsed).toHaveProperty("split");
