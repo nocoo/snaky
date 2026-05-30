@@ -11,7 +11,7 @@ final class StatusItemController {
     private var eventMonitor: Any?
 
     init() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.isVisible = true
         statusItem.behavior = []
 
