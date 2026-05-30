@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.2 (2026-05-31)
+
+### Fixes
+
+- **macOS menu bar icon invisible** — the bundled `menubar-icon.png` was a full-color logo, but `StatusItemController` set `image.isTemplate = true`. In template mode AppKit ignores RGB and renders only the alpha channel; on a colorful PNG with a near-opaque alpha that produced a black square or nothing visible, depending on the menubar background. Regenerated `menubar-icon.png` as a 44×44 monochrome (black) image with the snake silhouette baked into the alpha channel, so template tinting now produces a clean, theme-adaptive icon.
+
 ## v1.0.1 (2026-05-30)
 
 ### Fixes
