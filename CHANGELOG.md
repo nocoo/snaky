@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.1 (2026-05-30)
+
+### Fixes
+
+- **macOS menu bar icon visibility** — switch `NSStatusItem` from `squareLength` to `variableLength`. On macOS Tahoe (26) with a saturated menu bar, square-length items get assigned an off-screen frame (Y=-14) — `isVisible` reports true but the user sees nothing. Variable-length lets macOS gracefully compress and place the icon on-screen.
+- **Bundle id** — rename `com.nocoo.snaky` → `ai.hexly.snaky.01` to avoid SystemUI cooldown on bundle ids that have been repeatedly relaunched during dev.
+- **Asset lookup hardening** — `SnakyCore.menuBarIcon` now tries multiple `Bundle.module` layouts so the icon resolves both in `swift run` dev mode and in the installed `.app`.
+
 ## v1.0.0 (2026-05-30)
 
 ### 🎉 First stable release
