@@ -7,14 +7,14 @@ import Testing
     private let decoder = NdjsonDecoder()
 
     @Test func decodeMeta() throws {
-        let line = #"{"event":"meta","data":{"mode":"split","version":"0.6.2","counts":{"split":30}}}"#
+        let line = #"{"event":"meta","data":{"mode":"split","version":"1.0.0","counts":{"split":30}}}"#
         let event = try decoder.decode(line: line)
         guard case .meta(let mode, let version, let split, _, _) = event else {
             Issue.record("expected meta")
             return
         }
         #expect(mode == "split")
-        #expect(version == "0.6.2")
+        #expect(version == "1.0.0")
         #expect(split == 30)
     }
 

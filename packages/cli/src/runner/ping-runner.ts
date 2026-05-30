@@ -35,6 +35,24 @@ export async function runPing(
       const roundMs = results[i] ?? -1;
       roundResults[i]?.push(roundMs);
     }
+    // Emit partial result after each round so consumers can show progress
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const rounds = roundResults[i] ?? [];
+      if (!target) continue;
+      const successful = rounds.filter((r) => r >= 0).sort((a, b) => a - b);
+      const partial: PingResult =
+        successful.length === 0
+          ? { name: target.name, tag: target.tag, ok: false, medianMs: null, rounds }
+          : {
+              name: target.name,
+              tag: target.tag,
+              ok: true,
+              medianMs: median(successful),
+              rounds,
+            };
+      opts.onResult?.(i, partial);
+    }
   }
 
   const finalResults = targets.map((target, i) => {

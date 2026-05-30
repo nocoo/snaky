@@ -22,21 +22,15 @@ public enum ProbeTargetRegistry {
         ProbeTarget(name: "perplexity", category: "ai", tier: 1),
         ProbeTarget(name: "midjourney", category: "ai", tier: 1),
         ProbeTarget(name: "deepseek", category: "ai", tier: 2),
-        ProbeTarget(name: "cursor", category: "ai", tier: 2),
         ProbeTarget(name: "poe", category: "ai", tier: 2),
-        ProbeTarget(name: "huggingface", category: "ai", tier: 2),
         ProbeTarget(name: "replicate", category: "ai", tier: 2),
         // social
         ProbeTarget(name: "discord", category: "social", tier: 1),
         ProbeTarget(name: "x", category: "social", tier: 1),
         ProbeTarget(name: "medium", category: "social", tier: 1),
-        ProbeTarget(name: "reddit", category: "social", tier: 2),
-        ProbeTarget(name: "tumblr", category: "social", tier: 2),
-        ProbeTarget(name: "telegram", category: "social", tier: 2),
         // crypto
         ProbeTarget(name: "coinbase", category: "crypto", tier: 1),
         ProbeTarget(name: "okx", category: "crypto", tier: 1),
-        ProbeTarget(name: "binance", category: "crypto", tier: 2),
         ProbeTarget(name: "kraken", category: "crypto", tier: 2),
         // tools
         ProbeTarget(name: "zoom", category: "tools", tier: 1),
@@ -47,8 +41,6 @@ public enum ProbeTargetRegistry {
         ProbeTarget(name: "notion", category: "tools", tier: 2),
         ProbeTarget(name: "linear", category: "tools", tier: 2),
         ProbeTarget(name: "canva", category: "tools", tier: 2),
-        ProbeTarget(name: "figma", category: "tools", tier: 2),
-        ProbeTarget(name: "vercel", category: "tools", tier: 2),
         // dev
         ProbeTarget(name: "cloudflare", category: "dev", tier: 1),
         ProbeTarget(name: "cdnjs", category: "dev", tier: 1),
@@ -59,14 +51,8 @@ public enum ProbeTargetRegistry {
         ProbeTarget(name: "kali", category: "dev", tier: 1),
         ProbeTarget(name: "bytedance-intl", category: "dev", tier: 1),
         ProbeTarget(name: "docker", category: "dev", tier: 2),
-        ProbeTarget(name: "pypi", category: "dev", tier: 2),
-        ProbeTarget(name: "crates", category: "dev", tier: 2),
-        ProbeTarget(name: "hackernews", category: "dev", tier: 2),
         // media
         ProbeTarget(name: "crunchyroll", category: "media", tier: 1),
-        ProbeTarget(name: "spotify", category: "media", tier: 2),
-        ProbeTarget(name: "soundcloud", category: "media", tier: 2),
-        ProbeTarget(name: "twitch", category: "media", tier: 2),
     ]
 
     public static let categoryOrder: [String] = [
@@ -96,4 +82,20 @@ public enum ProbeTargetRegistry {
             return (category: cat, targets: targets)
         }
     }
+}
+
+public struct PingTargetMeta: Sendable {
+    public let name: String
+    public let tag: String
+}
+
+public enum PingTargetRegistry {
+    public static let allTargets: [PingTargetMeta] = [
+        PingTargetMeta(name: "ping-bytedance", tag: "domestic"),
+        PingTargetMeta(name: "ping-taobao", tag: "domestic"),
+        PingTargetMeta(name: "ping-wechat", tag: "domestic"),
+        PingTargetMeta(name: "ping-github", tag: "international"),
+        PingTargetMeta(name: "ping-cloudflare", tag: "international"),
+        PingTargetMeta(name: "ping-youtube", tag: "international"),
+    ]
 }

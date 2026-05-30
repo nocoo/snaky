@@ -203,6 +203,30 @@ describe("runDnsLeakDetection", () => {
     expect(output.dnsServers[0]?.countryCode).toBe("CN");
   });
 
+  it("returns no_leak when user outside CN and resolver is non-CN foreign DoH", async () => {
+    // User in HK, resolver geo-located in US (Google's DoH anycast edge).
+    // This is NOT a leak — the proxy used an upstream DoH provider.
+    const fetchFn = makeFetch({
+      "cdn-cgi/trace": { status: 200, body: "ip=103.116.72.119\nloc=HK\n" },
+      "/result/": { status: 200, body: { dns_servers: ["8.8.8.8"] } },
+      "echo.nocoo.cloud/api/ip": {
+        status: 200,
+        body: {
+          ip: "8.8.8.8",
+          location: { country: "United States", countryCode: "US", isp: "Google LLC", asn: 15169 },
+        },
+      },
+    });
+
+    const { output, exitCode } = await advanceTimersWhileRunning(
+      runDnsLeakDetection({ rounds: 1, echoApiKey: "test-key", fetchFn }),
+    );
+
+    expect(output.verdict).toBe("no_leak");
+    expect(exitCode).toBe(0);
+    expect(output.dnsServers[0]?.leaked).toBe(false);
+  });
+
   it("returns inconclusive when cftrace fails", async () => {
     const fetchFn = makeFetch({
       "cdn-cgi/trace": { status: 500, body: "" },

@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { promises as dns } from "node:dns";
 import { matchesAnyCidr } from "./cidr.js";
 import type { DnsLeakOutput, DnsLeakVerdict, DnsServer } from "./types.js";
 
@@ -27,11 +26,24 @@ export function generateToken(): string {
   return randomBytes(6).toString("hex");
 }
 
-async function lookupWithTimeout(hostname: string, timeoutMs: number): Promise<void> {
-  await Promise.race([
-    dns.lookup(hostname).then(() => {}, () => {}),
-    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
-  ]);
+async function lookupWithTimeout(hostname: string, timeoutMs: number, fetchFn: typeof fetch): Promise<void> {
+  // We trigger DNS resolution via an HTTP request rather than dns.lookup() so the
+  // request flows through the user's system proxy / Clash / Mihomo. That way DNS is
+  // resolved by the proxy's configured resolvers (DoH upstream, fake-ip, etc.) — the
+  // same path the browser takes. A bare dns.lookup() bypasses the proxy and hits the
+  // OS resolver (often the ISP), producing a false-positive leak verdict.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    // Path doesn't matter — we only need the hostname to be resolved.
+    await fetchFn(`http://${hostname}/pixel.gif?_=${Date.now()}`, {
+      signal: controller.signal,
+      // No-store so we don't accidentally hit a cache.
+      cache: "no-store",
+    }).catch(() => {});
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -172,10 +184,21 @@ function determineVerdict(
     return { verdict: "inconclusive", servers: dnsServers };
   }
 
-  const servers = dnsServers.map((s) => ({
-    ...s,
-    leaked: s.countryCode !== userCountryCode,
-  }));
+  // Heuristic matching how net.coffee/dns determines leaks: a real DNS leak shows
+  // up as a resolver geo-located in mainland China (because traffic was claimed to
+  // be exiting elsewhere but DNS still went through China Telecom/Mobile/Unicom).
+  // Foreign DNS providers (Google/Cloudflare/...) resolving from US/BE/etc. when
+  // the user is in HK is NOT a leak — that's just the upstream DoH provider's
+  // anycast network, same as a browser using DoH would see.
+  const userInChina = userCountryCode === "CN";
+  const servers = dnsServers.map((s) => {
+    if (userInChina) {
+      // User in China: any non-CN resolver is unexpected (rare case).
+      return { ...s, leaked: s.countryCode !== "CN" };
+    }
+    // User outside China: only CN resolvers count as a leak.
+    return { ...s, leaked: s.countryCode === "CN" };
+  });
   const hasLeak = servers.some((s) => s.leaked);
   return { verdict: hasLeak ? "leak" : "no_leak", servers };
 }
@@ -202,7 +225,7 @@ export async function runDnsLeakDetection(
   for (let i = 1; i <= opts.rounds; i++) {
     opts.onProgress?.(`Sending DNS queries... (${i}/${opts.rounds})`);
     const hostname = `${token}-${i}.${DNS_SUFFIX}`;
-    await lookupWithTimeout(hostname, LOOKUP_TIMEOUT_MS);
+    await lookupWithTimeout(hostname, LOOKUP_TIMEOUT_MS, fetchFn);
     if (i < opts.rounds) await sleep(ROUND_DELAY_MS);
   }
 

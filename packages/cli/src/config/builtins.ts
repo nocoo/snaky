@@ -40,31 +40,15 @@ export const BUILTIN_ENDPOINTS: (CftraceEndpoint | HttpHeaderEndpoint)[] = [
   { name: "crunchyroll", method: "cftrace", domain: "crunchyroll.com", category: "media", tier: 1 },
   // extended — ai
   { name: "deepseek", method: "cftrace", domain: "www.deepseek.com", category: "ai", tier: 2 },
-  { name: "cursor", method: "cftrace", domain: "www.cursor.com", category: "ai", tier: 2 },
   { name: "poe", method: "cftrace", domain: "poe.com", category: "ai", tier: 2 },
-  { name: "huggingface", method: "cftrace", domain: "huggingface.co", category: "ai", tier: 2 },
   { name: "replicate", method: "cftrace", domain: "replicate.com", category: "ai", tier: 2 },
-  // extended — social
-  { name: "reddit", method: "cftrace", domain: "www.reddit.com", category: "social", tier: 2 },
-  { name: "tumblr", method: "cftrace", domain: "www.tumblr.com", category: "social", tier: 2 },
-  { name: "telegram", method: "cftrace", domain: "telegram.org", category: "social", tier: 2 },
   // extended — tools
   { name: "notion", method: "cftrace", domain: "www.notion.so", category: "tools", tier: 2 },
   { name: "linear", method: "cftrace", domain: "linear.app", category: "tools", tier: 2 },
   { name: "canva", method: "cftrace", domain: "www.canva.com", category: "tools", tier: 2 },
-  { name: "figma", method: "cftrace", domain: "www.figma.com", category: "tools", tier: 2 },
-  { name: "vercel", method: "cftrace", domain: "vercel.com", category: "tools", tier: 2 },
   // extended — dev
   { name: "docker", method: "cftrace", domain: "hub.docker.com", category: "dev", tier: 2 },
-  { name: "pypi", method: "cftrace", domain: "pypi.org", category: "dev", tier: 2 },
-  { name: "crates", method: "cftrace", domain: "crates.io", category: "dev", tier: 2 },
-  { name: "hackernews", method: "cftrace", domain: "news.ycombinator.com", category: "dev", tier: 2 },
-  // extended — media
-  { name: "spotify", method: "cftrace", domain: "open.spotify.com", category: "media", tier: 2 },
-  { name: "soundcloud", method: "cftrace", domain: "soundcloud.com", category: "media", tier: 2 },
-  { name: "twitch", method: "cftrace", domain: "www.twitch.tv", category: "media", tier: 2 },
   // extended — crypto
-  { name: "binance", method: "cftrace", domain: "www.binance.com", category: "crypto", tier: 2 },
   { name: "kraken", method: "cftrace", domain: "www.kraken.com", category: "crypto", tier: 2 },
 ];
 

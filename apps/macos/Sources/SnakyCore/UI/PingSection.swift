@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct PingSection: View {
-    let results: [PingResult]
-    var history: [String: [PingRoundDot]] = [:]
+    let resultsByName: [String: PingResult]
+    let history: [String: [PingRoundDot]]
+    let isStreaming: Bool
 
     private let columns = [
         GridItem(.flexible(), spacing: 8),
@@ -11,12 +12,18 @@ struct PingSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(icon: "waveform.path", title: "Ping")
+            SectionHeader(
+                icon: "waveform.path",
+                title: "Connectivity",
+                accentColors: [.cyan, .blue]
+            )
             LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(results, id: \.name) { result in
+                ForEach(PingTargetRegistry.allTargets, id: \.name) { target in
                     PingCell(
-                        model: PingRowModel(from: result),
-                        historyDots: history[result.name] ?? []
+                        targetName: target.name,
+                        result: resultsByName[target.name],
+                        historyDots: history[target.name] ?? [],
+                        isStreaming: isStreaming
                     )
                 }
             }
@@ -26,22 +33,35 @@ struct PingSection: View {
 }
 
 private struct PingCell: View {
-    let model: PingRowModel
+    let targetName: String
+    let result: PingResult?
     let historyDots: [PingRoundDot]
+    let isStreaming: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                FaviconView(name: model.name, isSuccess: model.isSuccess)
+                FaviconView(name: targetName, isSuccess: result?.ok ?? true)
                     .frame(width: 16, height: 16)
-                Text(Theme.displayName(for: model.name))
+                Text(Theme.displayName(for: targetName))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Spacer()
-                Text(model.medianText)
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(model.latencyColor.color)
+                if let result {
+                    let model = PingRowModel(from: result)
+                    Text(model.medianText)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(model.latencyColor.color)
+                } else if isStreaming {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(Theme.tertiaryText)
+                } else {
+                    Text("—")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Theme.tertiaryText)
+                }
             }
 
             if !historyDots.isEmpty {

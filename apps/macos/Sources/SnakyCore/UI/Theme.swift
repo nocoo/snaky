@@ -20,6 +20,47 @@ enum Theme {
         return String(chars.map { Character($0) })
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
+    static func countryName(for code: String?) -> String? {
+        guard let code, !code.isEmpty else { return nil }
+        switch code.uppercased() {
+        case "CN": return "中国"
+        case "HK": return "香港"
+        case "TW": return "台湾"
+        case "JP": return "日本"
+        case "KR": return "韩国"
+        case "SG": return "新加坡"
+        case "US": return "美国"
+        case "GB", "UK": return "英国"
+        case "DE": return "德国"
+        case "FR": return "法国"
+        case "CA": return "加拿大"
+        case "AU": return "澳大利亚"
+        case "IN": return "印度"
+        case "RU": return "俄罗斯"
+        case "BR": return "巴西"
+        case "NL": return "荷兰"
+        case "TH": return "泰国"
+        case "VN": return "越南"
+        case "MY": return "马来西亚"
+        case "ID": return "印度尼西亚"
+        case "PH": return "菲律宾"
+        case "AE": return "阿联酋"
+        case "TR": return "土耳其"
+        case "IT": return "意大利"
+        case "ES": return "西班牙"
+        case "MX": return "墨西哥"
+        case "ZA": return "南非"
+        case "PL": return "波兰"
+        case "SE": return "瑞典"
+        case "CH": return "瑞士"
+        case "IE": return "爱尔兰"
+        case "FI": return "芬兰"
+        case "NO": return "挪威"
+        default: return code.uppercased()
+        }
+    }
+
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     static func displayName(for key: String) -> String {
         let stripped = key.hasPrefix("ping-") ? String(key.dropFirst(5)) : key
@@ -122,15 +163,30 @@ struct Badge: View {
 struct SectionHeader: View {
     let icon: String
     let title: String
+    var accentColors: [Color] = [Theme.sectionTitle, Theme.sectionTitle]
 
     var body: some View {
-        HStack(spacing: 6) {
+        let iconBg = LinearGradient(
+            colors: accentColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        let textGradient = LinearGradient(
+            colors: accentColors,
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        return HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Theme.sectionTitle)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(iconBg)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .shadow(color: accentColors.last?.opacity(0.3) ?? .clear, radius: 3, y: 1)
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.sectionTitle)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(textGradient)
             Spacer()
         }
     }

@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.0.0 (2026-05-30)
+
+### 🎉 First stable release
+
+#### CLI
+
+- **NDJSON streaming** — new `--ndjson` flag emits per-event lines (`probe.result`, `ping.result`, `dns.progress`, `dns.update`, `summary`, `done`). Consumers can render results as they arrive instead of waiting for a single batched JSON.
+- **Streaming ping runner** — `runPing` emits a partial `PingResult` after each round so live consumers don't wait for all rounds × all targets.
+- **DNS leak detection rewrite** — DNS resolution is now triggered via HTTP fetch (which flows through the system proxy / Clash sniffer / fake-ip / upstream DoH) rather than `dns.lookup`, matching browser behavior. Verdict logic updated to match net.coffee/dns: a CN resolver while user is outside CN counts as a leak; foreign DoH anycast (Google/Cloudflare US/JP/etc.) does not.
+- **Probe registry cleanup** — removed 14 endpoints whose `cdn-cgi/trace` returns 401/403/404 or parse-fails: cursor, tumblr, pypi, hackernews, spotify, figma, huggingface, reddit, crates, telegram, vercel, soundcloud, twitch, binance.
+
+#### macOS app
+
+- **Streaming UI** — split + connect modules spawn as parallel `snaky --ndjson` subprocesses; results render incrementally instead of blocking on a 30s+ batched call. First probe row appears in ~300ms.
+- **DNS Leak tab** — colorful gradient hero, animated halo + rotating arc during scanning, real-time round counter (`Round 3 of 8`) parsed from CLI progress events.
+- **Click-to-copy probe row** — clicking any probe target copies its actual probe URL (`https://<host>/cdn-cgi/trace` for cftrace, full URL for http-header) with a capsule "Copied" toast.
+- **IP Summary fallback** — when Echo enrichment is unavailable, the secondary line derives a Chinese country name + hit count from the country code instead of leaving the row blank.
+- **Failure latency disambiguation** — failed probes (HTTP_ERROR/PARSE_ERROR/REDIRECT/HEADER_MISSING) still show their HTTP round-trip ms, but dimmed and with a tooltip clarifying it's not a healthy probe.
+- **Unified visual language** — gradient capsule tab picker, gradient header buttons, color-coded section headers (Connectivity cyan/blue, IP Summary green/mint, Probes indigo/purple), animated footer status dot.
+
 ## v0.6.2 (2026-05-29)
 
 ### Fixes

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ProbeSection: View {
@@ -12,7 +13,11 @@ struct ProbeSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(icon: "arrow.triangle.branch", title: "Probes")
+            SectionHeader(
+                icon: "arrow.triangle.branch",
+                title: "Probes",
+                accentColors: [.indigo, .purple]
+            )
             VStack(spacing: 12) {
                 ForEach(ProbeTargetRegistry.grouped(), id: \.category) { group in
                     ProbeGroupView(
@@ -70,6 +75,8 @@ private struct ProbeTargetRow: View {
     let isStreaming: Bool
     let onToggle: () -> Void
 
+    @State private var copied = false
+
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             Button(action: onToggle) {
@@ -99,8 +106,53 @@ private struct ProbeTargetRow: View {
             }
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+        .contentShape(Rectangle())
         .opacity(isEnabled ? 1.0 : 0.45)
         .animation(.easeInOut(duration: 0.2), value: entry?.ok)
+        .background(copied ? Theme.sectionTitle.opacity(0.18) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(alignment: .trailing) {
+            if copied {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("Copied")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Theme.sectionTitle.opacity(0.95))
+                .clipShape(Capsule())
+                .padding(.trailing, 8)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .onTapGesture {
+            guard let entry, let url = copyTarget(entry) else { return }
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(url, forType: .string)
+            withAnimation(.easeInOut(duration: 0.15)) { copied = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.easeOut(duration: 0.25)) { copied = false }
+            }
+        }
+        .help(entry.flatMap(copyTarget).map { "Click to copy: \($0)" } ?? "")
+    }
+
+    private func copyTarget(_ entry: ProbeEntry) -> String? {
+        let host: String? = {
+            if let resolved = entry.resolvedTarget, !resolved.isEmpty { return resolved }
+            return entry.target
+        }()
+        guard let value = host, !value.isEmpty else { return nil }
+        if entry.method == .cftrace {
+            // The actual probe URL hits Cloudflare's trace endpoint
+            return "https://\(value)/cdn-cgi/trace"
+        }
+        return value
     }
 
     @ViewBuilder
@@ -138,8 +190,9 @@ private struct ProbeTargetRow: View {
         Spacer()
         Text(latencyText(entry))
             .font(.system(size: 12, weight: .semibold, design: .monospaced))
-            .foregroundStyle(LatencyColor.from(ms: entry.responseTimeMs).color)
+            .foregroundStyle(latencyColor(entry))
             .frame(minWidth: 50, alignment: .trailing)
+            .help(entry.ok ? "" : latencyHelp(entry))
     }
 
     private func latencyText(_ entry: ProbeEntry) -> String {
@@ -147,5 +200,25 @@ private struct ProbeTargetRow: View {
             return "\(Int(ms))ms"
         }
         return "—"
+    }
+
+    private func latencyColor(_ entry: ProbeEntry) -> Color {
+        if entry.ok {
+            return LatencyColor.from(ms: entry.responseTimeMs).color
+        }
+        // For failures with latency (HTTP_ERROR/PARSE_ERROR/REDIRECT/HEADER_MISSING),
+        // the latency is real (TCP+TLS+HTTP completed) but the response was unusable —
+        // dim it so users don't read it as a healthy timing.
+        return Theme.tertiaryText
+    }
+
+    private func latencyHelp(_ entry: ProbeEntry) -> String {
+        switch entry.error?.code {
+        case .httpError, .parseError, .redirect, .headerMissing:
+            return "Connection succeeded but response was unusable. "
+                + "Latency reflects HTTP round-trip, not a healthy probe."
+        default:
+            return ""
+        }
     }
 }

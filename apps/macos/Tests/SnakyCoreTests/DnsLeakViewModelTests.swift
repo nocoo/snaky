@@ -46,6 +46,17 @@ struct DnsLeakViewModelTests {
             if delay > .zero {
                 try await Task.sleep(for: delay)
             }
+            let isNdjson = arguments.contains("--ndjson")
+            if isNdjson && exitCode == 0 && !stdout.isEmpty {
+                // Wrap a parsed FullOutput-style payload as a dns.update event line
+                let line = "{\"event\":\"dns.update\",\"data\":"
+                var buffer = Data(line.utf8)
+                buffer.append(stdout)
+                buffer.append(Data("}\n".utf8))
+                let doneLine = #"{"event":"done","data":{"exitCode":0}}"# + "\n"
+                buffer.append(Data(doneLine.utf8))
+                return ProcessOutput(exitCode: 0, stdout: buffer, stderr: stderr)
+            }
             return ProcessOutput(
                 exitCode: exitCode,
                 stdout: stdout,

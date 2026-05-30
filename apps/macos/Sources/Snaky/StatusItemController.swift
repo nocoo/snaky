@@ -12,6 +12,8 @@ final class StatusItemController {
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.isVisible = true
+        statusItem.behavior = []
 
         panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 451, height: 818),
@@ -36,8 +38,14 @@ final class StatusItemController {
         panel.contentView = hostingView
 
         if let button = statusItem.button {
-            button.image = SnakyCore.menuBarIcon
-                ?? NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
+            if let icon = SnakyCore.menuBarIcon {
+                button.image = icon
+            } else {
+                let fallback = NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
+                fallback?.isTemplate = true
+                button.image = fallback
+            }
+            button.imagePosition = .imageOnly
             button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])

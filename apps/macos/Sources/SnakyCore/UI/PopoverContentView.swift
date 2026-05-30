@@ -29,12 +29,22 @@ public struct PopoverContentView: View {
 
             if viewModel.cliVersion != nil || viewModel.lastUpdated != nil || viewModel.statusMessage != nil {
                 Rectangle()
-                    .fill(Theme.cardBorder)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.clear, Theme.cardBorder, Color.clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .frame(height: 1)
-                HStack {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(footerStatusColor)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: footerStatusColor.opacity(0.5), radius: 2)
                     if let status = viewModel.statusMessage {
                         Text(status)
-                            .font(.system(size: 11))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Theme.secondaryText)
                     } else if let date = viewModel.lastUpdated {
                         Text("Updated \(date, style: .relative) ago")
@@ -43,13 +53,22 @@ public struct PopoverContentView: View {
                     }
                     Spacer()
                     if let version = viewModel.cliVersion {
-                        Text("snaky v\(version)")
-                            .font(.system(size: 11))
+                        Text("snaky")
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Theme.tertiaryText)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                        Text("v\(version)")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Theme.secondaryText)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(Theme.cardBackground)
+                            .clipShape(Capsule())
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
             }
         }
         .frame(width: 451, height: 818)
@@ -59,51 +78,74 @@ public struct PopoverContentView: View {
     }
 
     private var headerRow: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 10) {
             if let logoURL = Bundle.module.url(forResource: "logo", withExtension: "png", subdirectory: "Resources"),
                let nsImage = NSImage(contentsOf: logoURL) {
                 Image(nsImage: nsImage)
                     .resizable()
-                    .frame(width: 20, height: 20)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .frame(width: 22, height: 22)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
             }
-            Text("Snaky")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(Theme.primaryText)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Snaky")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Theme.primaryText, Theme.secondaryText],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                Text("Network Probe")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Theme.tertiaryText)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+            }
             Spacer()
             if viewModel.state == .loading {
                 ProgressView()
                     .controlSize(.mini)
-                    .tint(Theme.sectionTitle)
+                    .tint(.cyan)
             }
-            Button {
+            headerButton(
+                icon: viewModel.state == .loading ? "xmark" : "arrow.clockwise",
+                colors: [.cyan, .blue]
+            ) {
                 if viewModel.state == .loading {
                     viewModel.cancel()
                 } else {
                     viewModel.refresh()
                 }
-            } label: {
-                Image(systemName: viewModel.state == .loading ? "xmark" : "arrow.clockwise")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.sectionTitle)
-                    .frame(width: 26, height: 26)
-                    .background(Theme.sectionTitle.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
             }
-            .buttonStyle(.plain)
-            Button {
+            headerButton(icon: "power", colors: [.gray.opacity(0.7), .gray.opacity(0.5)]) {
                 NSApplication.shared.terminate(nil)
-            } label: {
-                Image(systemName: "power")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.secondaryText)
-                    .frame(width: 26, height: 26)
-                    .background(Theme.secondaryText.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
             }
-            .buttonStyle(.plain)
         }
         .padding(.bottom, 4)
+    }
+
+    private func headerButton(
+        icon: String,
+        colors: [Color],
+        action: @escaping () -> Void
+    ) -> some View {
+        let bg = LinearGradient(
+            colors: colors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        return Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(bg)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .shadow(color: colors.last?.opacity(0.35) ?? .clear, radius: 4, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -144,9 +186,11 @@ public struct PopoverContentView: View {
 
     @ViewBuilder
     private func successView(_ output: FullOutput) -> some View {
-        if let ping = output.connect, !ping.results.isEmpty {
-            PingSection(results: ping.results, history: viewModel.pingHistory)
-        }
+        PingSection(
+            resultsByName: pingResultsByName(output),
+            history: viewModel.pingHistory,
+            isStreaming: viewModel.pingInFlight
+        )
         if let probe = output.split, !probe.uniqueIps.isEmpty {
             UniqueIpSection(ips: deduplicatedIps(probe.uniqueIps))
         }
@@ -165,18 +209,29 @@ public struct PopoverContentView: View {
                 isStreaming: viewModel.probesInFlight
             )
         }
-        if output.connect?.results.isEmpty ?? true && output.split == nil {
-            ContentUnavailableView(
-                "No Endpoints",
-                systemImage: "tray",
-                description: Text("No endpoints configured")
-            )
-        }
     }
 
     private func deduplicatedIps(_ ips: [UniqueIp]) -> [UniqueIp] {
         var seen = Set<String>()
         return ips.filter { seen.insert($0.ip).inserted }
+    }
+
+    private func pingResultsByName(_ output: FullOutput) -> [String: PingResult] {
+        var dict: [String: PingResult] = [:]
+        for result in output.connect?.results ?? [] {
+            dict[result.name] = result
+        }
+        return dict
+    }
+
+    private var footerStatusColor: Color {
+        if viewModel.statusMessage != nil { return .orange }
+        switch viewModel.state {
+        case .loading: return .cyan
+        case .success: return .green
+        case .error: return .red
+        case .idle: return Theme.tertiaryText
+        }
     }
 
     private func errorBanner(_ error: CLIError) -> some View {
