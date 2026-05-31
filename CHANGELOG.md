@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.3 (2026-05-31)
+
+### Fixes
+
+- **macOS menu bar icon still invisible after v1.0.2** — even with the new monochrome alpha icon and `NSStatusItem.isVisible` reporting `1`, macOS SystemUI had silently put the bundle id `ai.hexly.snaky.01` into a cooldown / hidden list after many dev relaunches. The status item was created and the icon loaded, but ControlCenter refused to draw it (no icon, no title, nothing). Renamed bundle id to `ai.hexly.snaky.02` (Info.plist + `build.sh` codesign identifier) so SystemUI treats it as a fresh app — the icon appears immediately.
+
 ## v1.0.2 (2026-05-31)
 
 ### Fixes

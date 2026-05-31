@@ -54,6 +54,22 @@ pnpm typecheck     # tsc --noEmit
 
 ## Retrospective
 
+### 0. macOS SystemUI 会对反复重启的 bundle id 施加 cooldown
+
+bundle id 在频繁打包/重启的开发周期中会被 macOS SystemUI(ControlCenter) 加入冷却名单——
+进程在跑、`isVisible=1`、`NSStatusItem` scene 也建好,但 menubar 上**完全看不到**图标
+和 title(连 `button.title="X"` 都不渲染)。这跟 squareLength 被推到 Y=-14 是**两个**
+独立的坑——后者 v1.0.1 已修复(改用 variableLength)。
+
+**诊断:** 直接跑 `Snaky.app/Contents/MacOS/Snaky` 看 stderr。如果 NSLog 显示
+`isVisible=1 length=-1.0`、icon size 也对、但 menubar 仍空,就是 SystemUI cooldown。
+
+**修复:** 改 bundle id 后缀(`.01` → `.02` → `.03`...) + 同步 build.sh 里的
+`codesign --identifier`。重新签完打开,图标立刻出现。
+
+**根除:** 不要拿同一个 bundle id 反复 `open .app` 调试;开发期就用 `swift run`
+跑(它的 bundle id 会带 SPM 的临时 hash)。只有打 release 才用正式 bundle id。
+
 ### 1. `undici` 版本必须匹配 Node engines
 
 `undici@8` 要求 **Node 23+**(`webidl.util.markAsUncloneable`)。本项目 `engines.node >= 20`,
