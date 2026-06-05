@@ -54,21 +54,59 @@ pnpm typecheck     # tsc --noEmit
 
 ## Retrospective
 
-### 0. macOS SystemUI 会对反复重启的 bundle id 施加 cooldown
+### 0. macOS Tahoe ControlCenter 对 anon 进程的 NSStatusItem 永久 block
 
-bundle id 在频繁打包/重启的开发周期中会被 macOS SystemUI(ControlCenter) 加入冷却名单——
-进程在跑、`isVisible=1`、`NSStatusItem` scene 也建好,但 menubar 上**完全看不到**图标
-和 title(连 `button.title="X"` 都不渲染)。这跟 squareLength 被推到 Y=-14 是**两个**
-独立的坑——后者 v1.0.1 已修复(改用 variableLength)。
+(2026-06-06 推翻原"SystemUI cooldown"假说,真因如下。)
 
-**诊断:** 直接跑 `Snaky.app/Contents/MacOS/Snaky` 看 stderr。如果 NSLog 显示
-`isVisible=1 length=-1.0`、icon size 也对、但 menubar 仍空,就是 SystemUI cooldown。
+**症状:** release `.app` 打包安装后 menubar **完全看不到** Snaky 图标。
+进程在跑、`isVisible=true`、log 显示 frame 在合理坐标,但视觉上无图标。
 
-**修复:** 改 bundle id 后缀(`.01` → `.02` → `.03`...) + 同步 build.sh 里的
-`codesign --identifier`。重新签完打开,图标立刻出现。
+**根因:** macOS 26 (Tahoe) ControlCenter 在 NSStatusItem 注册路径上加了一道
+"ephemeral 黑名单"。当进程类型是 `anon<>` (即未通过 LaunchServices 启动),
+ControlCenter 在 ~15ms 内走完:
+1. `Host properties initialized`
+2. `Starting to track host`
+3. `Created ephemaral instance ... with positioning .ephemeral`
+4. `Moving host to blocked list`  ← 永久把这个 bundle id 加入 blocked
+5. 之后每次该 bundle id 启动直接 `Starting to track blocked host`
 
-**根除:** 不要拿同一个 bundle id 反复 `open .app` 调试;开发期就用 `swift run`
-跑(它的 bundle id 会带 SPM 的临时 hash)。只有打 release 才用正式 bundle id。
+直接 exec (`./.app/Contents/MacOS/Snaky`、`swift run`、`.build/release/Snaky`)
+都触发这条路径。一旦被 block,**这个 bundle id 在这台机器上永久作废**——
+`displayablemenuextras` 里的 displayableInfos 永远是空数组,换 ControlCenter
+重启/删 prefs 都救不回来。
+
+**关键证据:**
+- 工作的 menubar app (Gecko、Raycast、SwiftBar、Tailscale...) 在 ControlCenter
+  log 里都是 `app<application.X.Y.Z>` 格式
+- 失败的 (Snaky 任意 bundle id 任意签名) 都是 `anon<Snaky>(501):pid` 格式
+- 触发 block 不需要任何代码缺陷——空白 30 行 NSStatusItem MVP 同样被 block
+
+**正确启动路径:**
+- 通过 `open /Applications/Snaky.app` (LaunchServices 走 application bootstrap)
+- 或通过 Dock/Finder/Spotlight 双击启动
+- **绝对不要直接 exec .app 内的二进制**,即使是为了拿 stderr——会污染 bundle id
+
+**调试期间的正确做法:**
+- 第一次怀疑某 bundle id 已被 block,用 `log show --predicate 'process == "ControlCenter"'`
+  搜 `bid:<your-id>`,看有没有 `track blocked host`。
+- 一旦 block,**只能换全新 bundle id**——重装/重签/重启都无效。
+- 不要在终端 exec `.app/Contents/MacOS/Snaky` 看日志;改用 `open` 启动后 `log show`
+  按进程名抓:`log show --predicate 'process == "Snaky"' --last 1m`。
+
+**build.sh 已加 `lsregister -f` 步骤**,确保打完包先注册到 LaunchServices,
+之后 `open` 启动就走 application 路径。
+
+### 0a. 历史误判: 这不是"SystemUI cooldown"
+
+v1.0.1 / v1.0.2 / v1.0.3 调试期间多次"换 bundle id 后缀"修复,本以为是
+反复打包导致系统对 bundle id 冷却,实际全部是 anon-process block 反复触发。
+每次"看着新 id 第一次有效"——其实 frame 数字误导,根本没渲染过。
+真正的 fix 是改启动方式,不是改 id。
+
+### 0b. variableLength 仍然是对的
+
+v1.0.1 改 variableLength 修的是另一个问题 (Tahoe 上 squareLength 满载时 Y=-14),
+跟本次 anon block 无关,保留。
 
 ### 1. `undici` 版本必须匹配 Node engines
 
