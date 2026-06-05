@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.4 (2026-06-06)
+
+### Fixes
+
+- **macOS menu bar icon still invisible — true root cause found** — the v1.0.1–v1.0.3 "SystemUI cooldown" hypothesis was wrong. The real issue: macOS 26 Tahoe ControlCenter blocks `NSStatusItem` registration whenever the host process is started as `anon<>` (anything launched by directly exec'ing the binary, including `./Snaky.app/Contents/MacOS/Snaky`, `swift run`, or `.build/release/Snaky`). Within ~15ms ControlCenter walks `Host properties initialized` → `Created ephemaral instance ... with positioning .ephemeral` → `Moving host to blocked list`, and the bundle id is then **permanently blocked** on that machine — no reinstall / re-sign / restart helps. Working menubar apps (Gecko, Raycast, SwiftBar, Tailscale…) are launched via LaunchServices and appear as `app<application.X>` processes, which ControlCenter accepts normally.
+- **`Info.plist` + `build.sh`** — revert bundle id to plain `ai.hexly.snaky` (no `.NN` suffix). The numbered suffixes were a misdiagnosis-driven workaround that piled up stale blocked entries in ControlCenter.
+- **`build.sh`** — append `lsregister -f $APP_BUNDLE` so the freshly built `.app` is registered with LaunchServices before first launch. Print an explicit reminder: always launch via `open` (or Dock/Finder/Spotlight), never exec the binary directly — this is what makes the menubar icon actually appear.
+
 ## v1.0.3 (2026-05-31)
 
 ### Fixes
