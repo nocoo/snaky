@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Snaky</string>
 	<key>CFBundleIdentifier</key>
-	<string>ai.hexly.snaky.02</string>
+	<string>ai.hexly.snaky</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

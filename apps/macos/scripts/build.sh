@@ -106,7 +106,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "==> Code signing with identity: $SIGN_IDENTITY"
     codesign --force --options runtime \
         --sign "$SIGN_IDENTITY" \
-        --identifier "ai.hexly.snaky.02" \
+        --identifier "ai.hexly.snaky" \
         --entitlements "$ENTITLEMENTS" \
         --timestamp \
         "$APP_BUNDLE"
@@ -116,8 +116,16 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "    Signature valid."
 fi
 
+LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
+if [[ -x "$LSREG" ]]; then
+    echo "==> Registering with LaunchServices..."
+    "$LSREG" -f "$APP_BUNDLE"
+fi
+
 APP_SIZE=$(du -sh "$APP_BUNDLE" | cut -f1)
 echo ""
 echo "==> Build complete!"
 echo "    Output: $APP_BUNDLE"
 echo "    Size:   $APP_SIZE"
+echo ""
+echo "    IMPORTANT: launch via 'open $APP_BUNDLE' (NOT direct exec) — see retrospective."

@@ -40,15 +40,34 @@ final class StatusItemController {
         if let button = statusItem.button {
             if let icon = SnakyCore.menuBarIcon {
                 button.image = icon
+                NSLog("[Snaky] menubar icon loaded from SnakyCore: size=\(icon.size) isTemplate=\(icon.isTemplate)")
             } else {
                 let fallback = NSImage(systemSymbolName: "network", accessibilityDescription: "Snaky")
                 fallback?.isTemplate = true
                 button.image = fallback
+                NSLog("[Snaky] menubar icon FALLBACK to SF Symbol (SnakyCore.menuBarIcon was nil)")
             }
             button.imagePosition = .imageOnly
             button.action = #selector(togglePanel)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        } else {
+            NSLog("[Snaky] ERROR: statusItem.button is nil")
+        }
+        logStatusItemDiagnostics()
+    }
+
+    private func logStatusItemDiagnostics() {
+        NSLog("[Snaky] statusItem isVisible=\(statusItem.isVisible) length=\(statusItem.length)")
+        if let btn = statusItem.button {
+            NSLog("[Snaky] button frame=\(btn.frame) window=\(String(describing: btn.window?.frame))")
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self else { return }
+            NSLog("[Snaky] +2s isVisible=\(self.statusItem.isVisible) length=\(self.statusItem.length)")
+            if let btn = self.statusItem.button {
+                NSLog("[Snaky] +2s button frame=\(btn.frame) window=\(String(describing: btn.window?.frame))")
+            }
         }
     }
 
