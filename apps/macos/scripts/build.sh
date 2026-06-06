@@ -106,7 +106,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "==> Code signing with identity: $SIGN_IDENTITY"
     codesign --force --options runtime \
         --sign "$SIGN_IDENTITY" \
-        --identifier "ai.hexly.snaky" \
+        --identifier "ai.hexly.snakybar" \
         --entitlements "$ENTITLEMENTS" \
         --timestamp \
         "$APP_BUNDLE"
