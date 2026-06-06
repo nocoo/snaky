@@ -8,6 +8,32 @@ public enum CLIError: Error, Equatable, Sendable {
     case decodingFailed(String)
 }
 
+/// Build a PATH-augmented environment for spawning the CLI.
+///
+/// `.app` processes inherit launchd's minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`),
+/// which doesn't contain Homebrew, nvm, fnm, asdf, mise, etc. CLIs installed via
+/// these tools are usually `#!/usr/bin/env node` scripts — when their shebang
+/// runs `env node`, it fails with exit 127 because `node` isn't on PATH.
+///
+/// Prepend the CLI's containing directory plus a few common toolchain locations
+/// so the shebang resolves correctly. This is a no-op for native binaries.
+func cliEnvironment(executablePath: String) -> [String: String] {
+    var env = ProcessInfo.processInfo.environment
+    let cliDir = (executablePath as NSString).deletingLastPathComponent
+    let extras = [
+        cliDir,
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        NSHomeDirectory() + "/.local/bin",
+    ]
+    let existing = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+    let merged = (extras + existing.split(separator: ":").map(String.init)).reduce(into: [String]()) { acc, dir in
+        if !acc.contains(dir) { acc.append(dir) }
+    }
+    env["PATH"] = merged.joined(separator: ":")
+    return env
+}
+
 public protocol ProcessExecutor: Sendable {
     func run(
         executablePath: String,
@@ -80,6 +106,7 @@ public struct DefaultProcessExecutor: ProcessExecutor {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments
+        process.environment = cliEnvironment(executablePath: executablePath)
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
@@ -137,6 +164,7 @@ public struct DefaultProcessExecutor: ProcessExecutor {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: executablePath)
             process.arguments = arguments
+            process.environment = cliEnvironment(executablePath: executablePath)
 
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
