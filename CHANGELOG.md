@@ -1,6 +1,13 @@
 # Changelog
 
-## v1.0.4 (2026-06-06)
+## v1.0.5 (2026-06-06)
+
+### Fixes
+
+- **CLI not detected at startup** — `CLIDiscovery` shells out to `zsh -l -c "which snaky"` as a last resort. On macOS, login shells only source `.zprofile` / `.zshenv`, but Node version managers (nvm, fnm, asdf, mise, rtx) install their PATH-modification snippet in `.zshrc`, which is only sourced by interactive shells. Switch the shell invocation from `zsh -l -c` to `zsh -i -l -c` so `.zshrc` is loaded and these tools' shims resolve correctly. Add NSLog instrumentation to `CLIDiscovery.discover()` so future regressions surface in `Console.app`.
+- **`Info.plist` + `build.sh`** — bundle id `ai.hexly.snaky` got polluted in macOS Tahoe ControlCenter's blocked-host list during v1.0.4 testing (one accidental direct-exec is enough to permanently brand a bundle id as ephemeral). Move to a fresh `ai.hexly.snakybar` so first launch is treated as a clean app-process registration.
+
+
 
 ### Fixes
 
