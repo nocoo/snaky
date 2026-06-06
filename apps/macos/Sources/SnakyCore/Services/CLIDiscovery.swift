@@ -22,7 +22,10 @@ public struct DefaultShellExecutor: ShellExecutor {
     public func execute(command: String, timeout: Duration) async throws -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-l", "-c", command]
+        // -i (interactive) ensures ~/.zshrc is sourced so PATH-modifying setups
+        // like nvm, asdf, mise, fnm, rtx are loaded. -l alone (login shell) only
+        // reads .zprofile/.zshenv on macOS, where these tools rarely install.
+        process.arguments = ["-i", "-l", "-c", command]
 
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -79,11 +82,13 @@ public struct CLIDiscovery: Sendable {
     public func discover() async -> String? {
         if let configured = configuredPath() {
             if fileChecker.isExecutableFile(atPath: configured) {
+                NSLog("[Snaky] CLI discovery: configured path %@", configured)
                 return configured
             }
         }
 
         for path in Self.wellKnownPaths where fileChecker.isExecutableFile(atPath: path) {
+            NSLog("[Snaky] CLI discovery: well-known path %@", path)
             return path
         }
 
@@ -91,9 +96,11 @@ public struct CLIDiscovery: Sendable {
             command: "which snaky",
             timeout: .seconds(3)
         ), !shellPath.isEmpty, fileChecker.isExecutableFile(atPath: shellPath) {
+            NSLog("[Snaky] CLI discovery: shell which %@", shellPath)
             return shellPath
         }
 
+        NSLog("[Snaky] CLI discovery FAILED — well-known paths missed and 'zsh -i -l -c which snaky' returned nothing")
         return nil
     }
 }

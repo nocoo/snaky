@@ -16,7 +16,7 @@ struct IntegrationTests {
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-l", "-c", "which snaky"]
+        process.arguments = ["-i", "-l", "-c", "which snaky"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
