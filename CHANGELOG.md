@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.0.5 (2026-06-06)
+## v1.0.6 (2026-06-06)
+
+### Fixes
+
+- **CLI crashed with exit 127 even after discovery succeeds** — the `snaky` CLI is a Node script (`#!/usr/bin/env node`). When the macOS app spawns it, the child inherits launchd's minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`). `env node` then fails to resolve, returning 127 ("command not found"). For users with `snaky` installed via nvm/fnm/asdf/mise, the discovered path is real but the spawn never gets past the shebang. Build a CLI-tailored environment via `cliEnvironment(executablePath:)` that prepends the CLI's containing directory plus `/opt/homebrew/bin`, `/usr/local/bin`, and `~/.local/bin` to PATH. Wire it into both `run` and `stream` paths in `CLIBridge`.
+
+
 
 ### Fixes
 
