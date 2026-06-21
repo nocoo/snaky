@@ -7,9 +7,21 @@
 (pnpm --filter @nocoo/snaky build && pnpm --filter @nocoo/snaky test:e2e) &
 pid_e2e=$!
 
-# L2: Swift integration tests (real CLI invocation)
-(cd apps/macos && swift test --filter IntegrationTests 2>&1) &
-pid_swift_e2e=$!
+# Detect a full Xcode developer dir; skip Swift integration tests on
+# CommandLineTools-only hosts where xctest cannot dlopen Testing.framework.
+# Same gate as .husky/pre-commit.
+xcode_dev_dir=$(xcode-select -p 2>/dev/null)
+case "$xcode_dev_dir" in
+  *Xcode*.app/Contents/Developer) swift_enabled=1 ;;
+  *) swift_enabled=0 ;;
+esac
+
+if [ "$swift_enabled" = 1 ]; then
+  (cd apps/macos && swift test --filter IntegrationTests 2>&1) &
+  pid_swift_e2e=$!
+else
+  echo "pre-push: skipping Swift integration tests — xcode-select -p = ${xcode_dev_dir:-unset}; need a full Xcode.app for swift test (CLT alone cannot dlopen Testing.framework)."
+fi
 
 # G2: Security scanning
 (
@@ -33,7 +45,9 @@ pid_g2=$!
 
 fail=0
 wait $pid_e2e || fail=1
-wait $pid_swift_e2e || fail=1
+if [ "$swift_enabled" = 1 ]; then
+  wait $pid_swift_e2e || fail=1
+fi
 wait $pid_g2 || fail=1
 
 exit $fail
