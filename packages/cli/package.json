@@ -53,6 +53,6 @@
   "dependencies": {
     "ink": "^7.1.0",
     "react": "^19.2.7",
-    "undici": "^7.26.0"
+    "undici": "^7.28.0"
   }
 }
