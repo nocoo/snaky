@@ -14,21 +14,37 @@ pnpm --filter @nocoo/snaky test &
 pid_test=$!
 
 # --- macOS app (Swift) ---
-(cd apps/macos && swift build -Xswiftc -warnings-as-errors 2>&1) &
-pid_swift_build=$!
+# Run only on hosts with a full Xcode developer dir. CommandLineTools-only hosts
+# can build Swift but cannot dlopen Testing.framework at xctest runtime, so the
+# hook would block every commit on environment alone. Detect via xcode-select -p
+# pointing inside an Xcode.app bundle.
+xcode_dev_dir=$(xcode-select -p 2>/dev/null)
+case "$xcode_dev_dir" in
+  *Xcode*.app/Contents/Developer) swift_enabled=1 ;;
+  *) swift_enabled=0 ;;
+esac
 
-(cd apps/macos && swift test 2>&1) &
-pid_swift_test=$!
+if [ "$swift_enabled" = 1 ]; then
+  (cd apps/macos && swift build -Xswiftc -warnings-as-errors 2>&1) &
+  pid_swift_build=$!
 
-(cd apps/macos && swiftlint --strict 2>&1) &
-pid_swiftlint=$!
+  (cd apps/macos && swift test 2>&1) &
+  pid_swift_test=$!
+
+  (cd apps/macos && swiftlint --strict 2>&1) &
+  pid_swiftlint=$!
+else
+  echo "pre-commit: skipping Swift checks — xcode-select -p = ${xcode_dev_dir:-unset}; need a full Xcode.app for swift test (CLT alone cannot dlopen Testing.framework)."
+fi
 
 fail=0
 wait $pid_typecheck || fail=1
 wait $pid_lint || fail=1
 wait $pid_test || fail=1
-wait $pid_swift_build || fail=1
-wait $pid_swift_test || fail=1
-wait $pid_swiftlint || fail=1
+if [ "$swift_enabled" = 1 ]; then
+  wait $pid_swift_build || fail=1
+  wait $pid_swift_test || fail=1
+  wait $pid_swiftlint || fail=1
+fi
 
 exit $fail
