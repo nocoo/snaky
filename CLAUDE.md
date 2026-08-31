@@ -45,7 +45,7 @@ pnpm typecheck     # tsc --noEmit
 
 ## Conventions
 
-- Runtime: bun for scripts, node >=20 for CLI
+- Runtime: bun for scripts, node >=22 for CLI
 - Package manager: pnpm
 - Linter: biome (info-level `noNonNullAssertion` is acceptable)
 - Test: vitest (unit) + vitest with e2e config (E2E)
@@ -110,10 +110,10 @@ v1.0.1 改 variableLength 修的是另一个问题 (Tahoe 上 squareLength 满�
 
 ### 1. `undici` 版本必须匹配 Node engines
 
-`undici@8` 要求 **Node 23+**(`webidl.util.markAsUncloneable`)。本项目 `engines.node >= 20`,
+`undici@8` 要求 **Node 23+**(`webidl.util.markAsUncloneable`)。本项目 `engines.node >= 22`,
 所以 undici 锁在 `^7`(`7.26.x` 支持 Node 18+,提供同样的 `ProxyAgent`)。
 
-升级 undici 之前先核对它的 `engines`,否则在 Node 20/22 上加载即 `TypeError`,
+升级 undici 之前先核对它的 `engines`,否则在 Node 22 上加载即 `TypeError`,
 还会出现 **零 stderr、零 stdout、exit 1** 的诡异崩溃,极难定位。
 
 ### 2. CLI 入口必须挂全局错误 handler
@@ -141,4 +141,3 @@ unhandled rejection 都可能让进程**静默退出 1、stderr 全空**——CI
 
 发布规范要求,但本次漏了。虽然这次 lockfile 已是新的,没造成问题——但严格按
 规范执行可避免 CI `--frozen-lockfile` 因 lockfile 元数据漂移而失败。
-
