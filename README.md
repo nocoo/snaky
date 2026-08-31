@@ -120,18 +120,18 @@ snaky/
 
 | 层 | 技术 |
 |----|------|
-| 运行时 | [Node.js](https://nodejs.org) ≥ 20 |
+| 运行时 | [Node.js](https://nodejs.org) ≥ 22 |
 | 语言 | [TypeScript](https://www.typescriptlang.org) 5.8 (strict) |
 | TUI | [Ink](https://github.com/vadimdemedes/ink) v5 + [React](https://react.dev) 18 |
 | 构建 | [tsup](https://tsup.egoist.dev) (esbuild) |
 | 测试 | [Vitest](https://vitest.dev) + v8 coverage |
 | 代码规范 | [Biome](https://biomejs.dev) |
 | 包管理 | [pnpm](https://pnpm.io) workspace |
-| CI | [GitHub Actions](https://github.com/nocoo/snaky/actions) (Node 20/22) |
+| CI | [GitHub Actions](https://github.com/nocoo/snaky/actions) (Node 22) |
 
 ## 开发
 
-环境要求：Node.js ≥ 20, pnpm ≥ 9
+环境要求：Node.js ≥ 22, pnpm ≥ 9
 
 ```bash
 pnpm install       # 安装依赖

@@ -37,7 +37,7 @@ snaky/
 | Layer         | Choice                                                        |
 | ------------- | ------------------------------------------------------------- |
 | Language      | TypeScript (strict)                                           |
-| Runtime       | Node.js >= 20                                                 |
+| Runtime       | Node.js >= 22                                                 |
 | Build         | tsup (ESM output)                                             |
 | HTTP client   | undici (built-in fetch)                                       |
 | CLI framework | None (minimal arg parsing with `parseArgs` from `node:util`)  |
@@ -641,7 +641,7 @@ YouTube          international  92ms
 
 ## Proxy Support
 
-**Best-effort, not guaranteed.** Node.js built-in `fetch` (undici) does NOT automatically respect `HTTP_PROXY` / `HTTPS_PROXY` environment variables as of Node 20–22. Proxy support depends on the runtime version and may require explicit configuration in future versions.
+**Best-effort, not guaranteed.** Node.js built-in `fetch` (undici) does NOT automatically respect `HTTP_PROXY` / `HTTPS_PROXY` environment variables as of Node 22. Proxy support depends on the runtime version and may require explicit configuration in future versions.
 
 **v1 policy:**
 - Do not add a proxy agent dependency (like `undici-proxy-agent`) in v1
@@ -1242,4 +1242,3 @@ Phase 0 (scaffold)
 ```
 
 Phases 1–3 can be parallelized by different contributors (no cross-dependencies within a phase except step ordering).
-
