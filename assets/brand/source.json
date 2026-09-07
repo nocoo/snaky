@@ -1,0 +1,51 @@
+{
+	"study": "snaky/2026-09-07-01",
+	"finishing": "01",
+	"method": "generated",
+	"generationCalls": 1,
+	"nativeDimensions": [2048, 2048],
+	"sourceRevisionBefore": "a930a0e4883ee23e0eef0e7287d0efd06080533b",
+	"previous": {
+		"kind": "original",
+		"original": "/logos/originals/snaky.png",
+		"sourcePath": "logo.png",
+		"sourceUrl": "https://github.com/nocoo/snaky/blob/a930a0e4883ee23e0eef0e7287d0efd06080533b/logo.png",
+		"modified": false,
+		"width": 2048,
+		"height": 2048,
+		"bytes": 3128322,
+		"sha256": "ab232e170e4c4d8da05a0b0851c5e6082adc679aede2481a3a99897956bb2e4b",
+		"thumbnail": "/logos/display/snaky-160.webp",
+		"display": "/logos/display/snaky-1024.webp"
+	},
+	"masters": {
+		"logo.png": {
+			"sha256": "4b2ea7f80bf081cad292c81c95e576b8ec66c6c2ece04c3d90374f971d299630",
+			"width": 2048,
+			"height": 2048
+		},
+		"assets/brand/icon.png": {
+			"sha256": "f1a0bab24253e83d85b261d1686e5bd05e4cd4178da8c1d91bc0cb57d338e060",
+			"width": 2048,
+			"height": 2048
+		},
+		"assets/brand/icon-rounded.png": {
+			"sha256": "c4ca254e32aa4e47fd09f31991ade322422491cd8117aac5f627b1a018e94615",
+			"width": 2048,
+			"height": 2048
+		}
+	},
+	"roundedClearancePx": 198.5,
+	"acceptance": {
+		"decisionSource": "owner-delegated batch acceptance",
+		"ownerReviewedExactBytes": false,
+		"scope": "Named ten-project batch"
+	},
+	"review": "https://hexly.ai/logos/snaky",
+	"archive": "https://github.com/nocoo/hexly.ai/tree/main/artwork/logo-family/snaky/2026-09-07-01",
+	"model": "gpt-image-2",
+	"generation": {
+		"path": "raw/generated.png",
+		"sha256": "2283c4fb8964d661e4c36b20a2dc48ae08177af8a7d56cb67b15043763c9ba04"
+	}
+}

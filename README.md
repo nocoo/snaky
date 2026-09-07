@@ -1,4 +1,6 @@
-<p align="center"><img src="logo.png" width="128" height="128"/></p>
+<p align="center">
+  <img src="assets/brand/icon-rounded.png" alt="Snaky" width="128" height="128" />
+</p>
 
 <h1 align="center">Snaky</h1>
 

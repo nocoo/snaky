@@ -71,9 +71,9 @@ fi
 echo "==> Copying Info.plist..."
 cp "$PROJECT_DIR/Sources/Snaky/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 
-ICON_SOURCE="$PROJECT_DIR/../../logo.png"
+ICON_SOURCE="$PROJECT_DIR/../../assets/brand/app-icon-macos.png"
 if [[ -f "$ICON_SOURCE" ]]; then
-    echo "==> Generating app icon from logo.png..."
+    echo "==> Generating app icon from the native inset presentation..."
     ICONSET_DIR="$BUILD_DIR/Snaky.iconset"
     rm -rf "$ICONSET_DIR"
     mkdir -p "$ICONSET_DIR"
@@ -97,7 +97,7 @@ if [[ -f "$ICON_SOURCE" ]]; then
     fi
     echo "    Icon generated: $RESOURCES_DIR/AppIcon.icns"
 else
-    echo "    WARN: logo.png not found, skipping icon generation"
+    echo "    WARN: native icon canvas not found, skipping icon generation"
 fi
 
 if [[ -n "$SIGN_IDENTITY" ]]; then

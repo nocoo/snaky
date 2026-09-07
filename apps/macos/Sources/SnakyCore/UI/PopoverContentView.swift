@@ -84,7 +84,6 @@ public struct PopoverContentView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .frame(width: 22, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
                     .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
             }
             VStack(alignment: .leading, spacing: 0) {
