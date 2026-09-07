@@ -8,3 +8,5 @@ onlyBuiltDependencies:
 overrides:
   esbuild: ">=0.28.1"
   vite: ">=7.3.5"
+  nanoid: "3.3.18"
+  postcss: "8.5.23"
