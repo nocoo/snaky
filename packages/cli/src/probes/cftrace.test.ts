@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { probeCftrace } from "./cftrace.js";
 
 let server: Server;
@@ -120,14 +120,22 @@ describe("probeCftrace", () => {
   });
 
   it("returns DNS_FAILED for unresolvable host", async () => {
-    const result = await probeCftrace(
-      "http://this-domain-does-not-exist-12345.invalid",
-      { timeout: 5000 },
+    // VPN resolvers may rewrite .invalid names instead of returning NXDOMAIN.
+    const request = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } }),
     );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("DNS_FAILED");
-      expect(result.responseTimeMs).toBeNull();
+    try {
+      const result = await probeCftrace(
+        "http://this-domain-does-not-exist-12345.invalid",
+        { timeout: 5000 },
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("DNS_FAILED");
+        expect(result.responseTimeMs).toBeNull();
+      }
+    } finally {
+      request.mockRestore();
     }
   });
 

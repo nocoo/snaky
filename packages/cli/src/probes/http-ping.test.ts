@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { probeHttpPing } from "./http-ping.js";
 
 let server: Server;
@@ -102,10 +102,18 @@ describe("probeHttpPing", () => {
   });
 
   it("returns -1 for DNS failure", async () => {
-    const result = await probeHttpPing(
-      "http://this-does-not-exist-12345.invalid/test",
-      { timeout: 5000 },
+    // Exercise a DNS rejection without depending on the machine's resolver.
+    const request = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } }),
     );
-    expect(result).toBe(-1);
+    try {
+      const result = await probeHttpPing(
+        "http://this-does-not-exist-12345.invalid/test",
+        { timeout: 5000 },
+      );
+      expect(result).toBe(-1);
+    } finally {
+      request.mockRestore();
+    }
   });
 });
