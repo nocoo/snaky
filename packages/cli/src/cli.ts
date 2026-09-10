@@ -12,7 +12,6 @@ import type { Endpoint } from "./config/types.js";
 import { runDnsLeakDetection } from "./dns-leak/detect.js";
 import { formatDnsLeakTable } from "./dns-leak/output.js";
 import { normalizeDomain } from "./normalize.js";
-import { formatJson } from "./output/json.js";
 import type { LiveCallbacks } from "./output/live.js";
 import { createNdjsonWriter, type NdjsonWriter } from "./output/ndjson.js";
 import { startSpinner } from "./output/spinner.js";
@@ -510,7 +509,7 @@ async function handleRun(
   }
 
   if (flags.json) {
-    process.stdout.write(`${formatJson(fullOutput)}\n`);
+    process.stdout.write(`${JSON.stringify(fullOutput, null, 2)}\n`);
   } else if (useLiveTui) {
     const ipTable = formatIpSummaryTable(uniqueIps);
     if (ipTable) process.stdout.write(`\n${ipTable}\n`);
