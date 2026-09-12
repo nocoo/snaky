@@ -5,28 +5,21 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm test:e2e
+  quality:
+    uses: nocoo/base-ci/.github/workflows/quality.yml@ab52d72877d386c9a8fd224e9ac868e88be90539
+    with:
+      package-manager: "pnpm"
+      node-version: "22.20.0"
+      build: true
+      build-command: "pnpm run build"
+      test-command: "pnpm run test:coverage"
+      typecheck-command: "pnpm run typecheck"
+      lint-command: "pnpm run lint"
+      l2: true
+      l2-command: "pnpm run test:e2e"
+      lockfiles: "pnpm-lock.yaml"
+      gitleaks-config: ".gitleaks.toml"
+    secrets: inherit
