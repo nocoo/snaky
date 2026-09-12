@@ -16,6 +16,7 @@ jobs:
       build: true
       build-command: "pnpm run build"
       test-command: "pnpm run test:coverage"
+      coverage-path: "packages/cli/coverage"
       typecheck-command: "pnpm run typecheck"
       lint-command: "pnpm run lint"
       l2: true
