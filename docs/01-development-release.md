@@ -1,6 +1,6 @@
 # CLI 开发与发布
 
-Detailed project constraints and procedures. The root [CLAUDE.md](../CLAUDE.md) defines the quality contract and records current enforcement gaps.
+Detailed project constraints and procedures. The root [AGENTS.md](../AGENTS.md) defines the quality contract and records current enforcement gaps.
 
 ## Project Structure
 

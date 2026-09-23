@@ -1,6 +1,6 @@
 # Retrospective
 
-Accident narratives belong here. Keep only recurring project rules in `CLAUDE.md`; cross-project lessons belong in global rules and deterministic checks in hooks/tests.
+Accident narratives belong here. Keep only recurring project rules in `AGENTS.md`; cross-project lessons belong in global rules and deterministic checks in hooks/tests.
 
 ### 0. macOS Tahoe ControlCenter 对 anon 进程的 NSStatusItem 永久 block
 
