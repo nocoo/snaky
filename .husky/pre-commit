@@ -18,7 +18,10 @@ pid_test=$!
 # can build Swift but cannot dlopen Testing.framework at xctest runtime, so the
 # hook would block every commit on environment alone. Detect via xcode-select -p
 # pointing inside an Xcode.app bundle.
-xcode_dev_dir=$(xcode-select -p 2>/dev/null)
+xcode_dev_dir=""
+if command -v xcode-select >/dev/null 2>&1; then
+  xcode_dev_dir=$(xcode-select -p 2>/dev/null) || xcode_dev_dir=""
+fi
 case "$xcode_dev_dir" in
   *Xcode*.app/Contents/Developer) swift_enabled=1 ;;
   *) swift_enabled=0 ;;
