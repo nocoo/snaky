@@ -23,7 +23,7 @@ importers:
     dependencies:
       ink:
         specifier: ^7.1.0
-        version: 7.1.0(@types/react@19.2.17)(react@19.2.7)
+        version: 7.1.0(@types/react@19.3.0)(react@19.2.7)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -38,8 +38,8 @@ importers:
         specifier: ^26.6.5
         version: 26.6.5
       '@types/react':
-        specifier: ^19.2.17
-        version: 19.2.17
+        specifier: ^19.3.0
+        version: 19.3.0
       '@vitest/coverage-v8':
         specifier: 5.0.1
         version: 5.0.1(vitest@5.0.1)
@@ -578,8 +578,8 @@ packages:
   '@types/node@26.6.5':
     resolution: {integrity: sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==}
 
-  '@types/react@19.2.17':
-    resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
+  '@types/react@19.3.0':
+    resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
   '@vitest/coverage-v8@5.0.1':
     resolution: {integrity: sha512-FRC8ACiudC3dI6MTplzRSYWHDRnIv2IPfbzs4FdoJNsMal/35sWV8hwIfV8ZcqzSPy+uXHeMVONt9CEqtOU17w==}
@@ -1558,7 +1558,7 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
-  '@types/react@19.2.17':
+  '@types/react@19.3.0':
     dependencies:
       csstype: 3.2.3
 
@@ -1721,7 +1721,7 @@ snapshots:
 
   indent-string@5.0.0: {}
 
-  ink@7.1.0(@types/react@19.2.17)(react@19.2.7):
+  ink@7.1.0(@types/react@19.3.0)(react@19.2.7):
     dependencies:
       '@alcalzone/ansi-tokenize': 0.3.0
       ansi-escapes: 7.3.0
@@ -1750,7 +1750,7 @@ snapshots:
       ws: 8.21.0
       yoga-layout: 3.2.1
     optionalDependencies:
-      '@types/react': 19.2.17
+      '@types/react': 19.3.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
