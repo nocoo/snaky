@@ -1,22 +1,22 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noExplicitAny": "error"
-      },
-      "style": {
-        "useConst": "error",
-        "noNonNullAssertion": "error"
-      }
-    }
-  },
-  "formatter": {
-    "enabled": false
-  },
-  "files": {
-    "includes": ["src/**/*.ts", "tests/**/*.ts"]
-  }
+	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"suspicious": {
+				"noExplicitAny": "error"
+			},
+			"style": {
+				"useConst": "error",
+				"noNonNullAssertion": "error"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": false
+	},
+	"files": {
+		"includes": ["src/**/*.ts", "tests/**/*.ts"]
+	}
 }
